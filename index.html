@@ -517,7 +517,7 @@
     <section class="panel results" id="results" aria-live="polite"></section>
   </div>
 
-  <p class="foot">Built from Cato's public Knowledge Base and Learning Center. Limits quoted here (DLP 50 MB inline, anti-malware and sandbox 100 MB, Newly Registered Domains thresholds of 7 to 60 days, no TCP Acceleration on Alternative WAN rules) were current when this lab was made. SPACE is drawn once in the centre for clarity; in Cato it runs inside every PoP. Always confirm in the linked articles and your own account.</p>
+  <p class="foot">Built from Cato's public Knowledge Base and Learning Center. Limits quoted here (DLP 50 MB inline, anti-malware and sandbox 100 MB, Newly Registered Domains thresholds of 7 to 60 days, no TCP Acceleration on Alternative WAN rules) were current when this lab was made. SPACE is drawn once in the centre for clarity; in Cato it runs inside every PoP, and its engines run in parallel on each flow (see <a href="https://knowledge.catonetworks.com/docs/understanding-packet-flow-with-cato-space-architecture" target="_blank" rel="noopener noreferrer">Understanding packet flow with Cato SPACE</a>). Always confirm in the linked articles and your own account.</p>
 </div>
 
 <script>
@@ -567,6 +567,7 @@
     privpol: ['Configuring the Private Access Policy', 'https://support.catonetworks.com/hc/en-us/articles/35809693069213-Configuring-the-Private-Access-Policy'],
     privapp: ['Configuring Private Applications', 'https://support.catonetworks.com/hc/en-us/articles/35809663100317-Configuring-Private-Applications'],
     appconn: ['Working with App Connectors', 'https://knowledge.catonetworks.com/docs/working-with-app-connectors'],
+    packetflow: ['Understanding packet flow with Cato SPACE', 'https://knowledge.catonetworks.com/docs/understanding-packet-flow-with-cato-space-architecture'],
     portal: ['Browser Application Portal overview', 'https://knowledge.catonetworks.com/docs/browser-application-portal-overview-securing-remote-access-to-applications']
   };
 
@@ -581,10 +582,10 @@
     tcpacc: ['TCP Acceleration', ['tcpacc', 'scanner'], 'net'],
     qos: ['Priority and packet loss mitigation', ['netrules'], 'net'],
     msa: ['Hidden MSA block rule', ['inetfw', 'restricted'], 'fw'],
-    inetfw: ['Internet Firewall', ['inetfw', 'fwrec'], 'fw'],
-    wanfw: ['WAN Firewall', ['fwrec'], 'fw'],
+    inetfw: ['Internet Firewall', ['inetfw', 'fwrec', 'packetflow'], 'fw'],
+    wanfw: ['WAN Firewall', ['fwrec', 'packetflow'], 'fw'],
     lanfw: ['Socket LAN Firewall', ['lanfw'], 'fw'],
-    tls: ['TLS inspection', ['dlptr', 'secsvc'], 'threat'],
+    tls: ['TLS inspection', ['dlptr', 'secsvc', 'packetflow'], 'threat'],
     ips: ['IPS', ['ips', 'dnsprot', 'phish'], 'threat'],
     am: ['Anti-Malware, NG Anti-Malware and Sandbox', ['am', 'sandbox'], 'threat'],
     dlp: ['CASB and DLP', ['dlp', 'dlptr'], 'data'],
@@ -601,6 +602,14 @@
     appconn: ['App Connector', ['appconn', 'privapp'], 'net'],
     portal: ['Browser Access portal', ['portal'], 'net']
   };
+  // Phase of the flow in which each SPACE feature acts, following Cato's packet-flow article.
+  // The engines run in parallel with shared context; there is no priority between them.
+  const PHASE = {
+    msa: '1st packet', inetfw: '1st packet', wanfw: '1st packet', privaccess: '1st packet', rpf: '1st packet',
+    routing: '1st packet', internetonly: '1st packet', tcpacc: '1st packet', egress: '1st packet',
+    tls: 'TLS', rbi: 'TLS', dlp: 'HTTP body', am: 'response', ips: 'all phases'
+  };
+  const PHASE_ORDER = ['1st packet', 'TLS', 'HTTP body', 'response', 'all phases'];
   const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
   // Evaluation order used when listing several features at one enforcement point.
   const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
@@ -1023,7 +1032,7 @@
       r.steps.push({ at: pop, where: popName(pop), text: `${popName(pop)} terminates the tunnel and hands the traffic to SPACE in the Cato core.` });
       r.steps.push({ at: 'space', where: 'Cato SPACE', text: D.risky
         ? 'SPACE matches the Internet Firewall rule with the Remote Browsing action. The page runs in an isolated browser in the Cato Cloud, and only a safe visual stream is sent back to the user.'
-        : 'SPACE inspects it in a single pass: hidden MSA block, Internet Firewall, TLS inspection, IPS, anti-malware, then CASB and DLP.' });
+        : 'SPACE inspects it in a single pass. Its engines run in parallel and act as the data becomes available: the hidden MSA rule, Internet Firewall and IPS from the first packet, TLS inspection at the handshake, CASB and DLP on the request body, anti-malware on the response.' });
       r.steps.push({ at: d, where: 'Internet', text: "The packet leaves Cato NATed to a Cato public IP (shared, or your allocated IP), not to the site's ISP address." });
       if (S.type === 'guest') r.why += ' The Guest Wi-Fi range is marked Internet Only, so it gets internet access but no route to other sites.';
       if (S.type === 'dmz') r.why += ' Outbound traffic from the web server also leaves with a Cato IP, not with 2.2.2.2.';
@@ -1319,7 +1328,9 @@
     if (!r) return;
     const P = PANEL;
     const sorted = (list) => list.slice().sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
-    const inSpace = sorted(r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f }));
+    const byPhase = (a, b) => (PHASE_ORDER.indexOf(PHASE[a.id] || '1st packet') - PHASE_ORDER.indexOf(PHASE[b.id] || '1st packet')) || (ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const inSpace = r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space')).sort(byPhase)
+      .map((f) => ({ f, where: PHASE[f.id] || '1st packet' }));
     const edge = sorted(r.feats.filter((f) => !(r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f, where: f.at }));
     const g = el('g', {}, layerPanels);
     el('rect', { x: P.x, y: P.y, width: P.w, height: P.h, rx: 12, class: 't-panel' }, g);
@@ -1331,14 +1342,14 @@
     const sh = el('g', {}, g);
     el('circle', { cx: P.x + 20, cy: y - 4, r: 6, class: 't-panel-core' }, sh);
     el('text', { x: P.x + 32, y, class: 't-panel-sec' }, sh).textContent = 'CATO SPACE';
-    el('text', { x: P.x + P.w - 14, y, 'text-anchor': 'end', class: 't-panel-sub' }, sh).textContent = 'in order, one pass';
+    el('text', { x: P.x + P.w - 14, y, 'text-anchor': 'end', class: 't-panel-sub' }, sh).textContent = 'parallel · one pass';
     y += 10;
     const rowH = 23;
     const bottom = P.y + P.h - 10;
     const edgeNeed = 34 + Math.max(1, edge.length) * rowH;
     const spaceMax = Math.max(2, Math.floor((bottom - y - edgeNeed) / rowH));
     if (r.blocked && r.dropReason) {
-      inSpace.slice(0, spaceMax).forEach((it, i) => { row(g, P, y, it, (i + 1) + '. ' + SHORT[it.f.id]); y += rowH; });
+      inSpace.slice(0, spaceMax).forEach((it) => { row(g, P, y, it, SHORT[it.f.id]); y += rowH; });
       const t = el('text', { x: P.x + 14, y: y + 14, class: 't-panel-drop' }, g);
       el('tspan', { x: P.x + 14, dy: 0 }, t).textContent = '\u2715 Dropped in SPACE:';
       el('tspan', { x: P.x + 14, dy: 15 }, t).textContent = r.dropReason;
@@ -1352,7 +1363,7 @@
       why.forEach((line, i) => { el('tspan', { x: P.x + 14, dy: i ? 16 : 0 }, t).textContent = line; });
       y += 40;
     } else {
-      inSpace.slice(0, spaceMax).forEach((it, i) => { row(g, P, y, it, (i + 1) + '. ' + SHORT[it.f.id]); y += rowH; });
+      inSpace.slice(0, spaceMax).forEach((it) => { row(g, P, y, it, SHORT[it.f.id]); y += rowH; });
       if (inSpace.length > spaceMax) { el('text', { x: P.x + 14, y: y + 12, class: 't-panel-sub' }, g).textContent = `+${inSpace.length - spaceMax} more below the diagram`; y += 18; }
     }
 
