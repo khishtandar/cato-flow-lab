@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}
+  .t-panel-drop { font: 600 12.5px var(--body); fill: var(--bad); }
+  .feat.opt { border-style: dashed; background: var(--surface-2); }
+
+  svg.topo .t-space.dropped .core { stroke: var(--bad); stroke-width: 4; fill: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+  svg.topo .t-space.dropped .ring { stroke: var(--bad); fill: color-mix(in srgb, var(--bad) 6%, transparent); }
+  .t-space .n2.drop { fill: var(--bad); font: 700 12.5px var(--body); letter-spacing: 0.04em; }
+  .t-droppill { pointer-events: none; }
+  .t-droppill rect { fill: var(--bad); }
+  .t-droppill text { fill: #FFFFFF; font: 600 11.5px var(--body); }
+
+  .t-dir { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; pointer-events: none; }
+  .t-dir.blocked { fill: var(--bad); }
+</style>
+</head>
+<body>
+<title>Cato Flow Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #ECF0EE;
+    --surface: #FFFFFF;
+    --surface-2: #F4F7F6;
+    --ink: #14212A;
+    --muted: #566872;
+    --line: #C5D0CE;
+    --grid: #D2DBD9;
+    --accent: #D97A0B;
+    --accent-ink: #8A4A00;
+    --accent-soft: rgba(217, 122, 11, 0.12);
+    --cloud: #0E7C86;
+    --cloud-fill: rgba(14, 124, 134, 0.07);
+    --ok: #2F8A4C;
+    --warn: #B7700A;
+    --bad: #C23B22;
+    --info: #2563A8;
+    --na: #6B7B82;
+    --c-net: #0E7C86;
+    --c-fw: #6D3FD6;
+    --c-threat: #C23B22;
+    --c-data: #B0336F;
+    --c-pub: #2563A8;
+    --c-ops: #5F7078;
+    --shadow: 0 1px 2px rgba(20, 33, 42, 0.06), 0 8px 24px rgba(20, 33, 42, 0.06);
+    --display: "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0C1418;
+      --surface: #121D23;
+      --surface-2: #172630;
+      --ink: #E4ECEA;
+      --muted: #93A6AD;
+      --line: #2B3C45;
+      --grid: #1C2A31;
+      --accent: #F29A2E;
+      --accent-ink: #F7B866;
+      --accent-soft: rgba(242, 154, 46, 0.14);
+      --cloud: #3CB4BE;
+      --cloud-fill: rgba(60, 180, 190, 0.08);
+      --ok: #5CC37E;
+      --warn: #F0AE45;
+      --bad: #F06A50;
+      --info: #6AA6EE;
+      --na: #8FA0A7;
+      --c-net: #3CB4BE;
+      --c-fw: #A78BFA;
+      --c-threat: #F06A50;
+      --c-data: #E879B9;
+      --c-pub: #6AA6EE;
+      --c-ops: #8FA0A7;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0C1418;
+    --surface: #121D23;
+    --surface-2: #172630;
+    --ink: #E4ECEA;
+    --muted: #93A6AD;
+    --line: #2B3C45;
+    --grid: #1C2A31;
+    --accent: #F29A2E;
+    --accent-ink: #F7B866;
+    --accent-soft: rgba(242, 154, 46, 0.14);
+    --cloud: #3CB4BE;
+    --cloud-fill: rgba(60, 180, 190, 0.08);
+    --ok: #5CC37E;
+    --warn: #F0AE45;
+    --bad: #F06A50;
+    --info: #6AA6EE;
+    --na: #8FA0A7;
+    --c-net: #3CB4BE;
+    --c-fw: #A78BFA;
+    --c-threat: #F06A50;
+    --c-data: #E879B9;
+    --c-pub: #6AA6EE;
+    --c-ops: #8FA0A7;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 20px 40px;
+    display: grid;
+    gap: 18px;
+  }
+
+  /* Header */
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+  }
+  .brand { display: grid; gap: 4px; }
+  .eyebrow {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lede { margin: 2px 0 0; color: var(--muted); max-width: 68ch; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+    max-width: 340px;
+  }
+
+  /* Layout */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Controls */
+  .controls { display: grid; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .label {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 500 13px/1 var(--body);
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button {
+    font: 500 13px/1 var(--body);
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+  button:focus-visible, [tabindex]:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Diagram */
+  .stage { position: relative; }
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    min-height: 44px;
+  }
+  .hint strong { color: var(--accent-ink); font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  .canvas-scroll { overflow-x: auto; }
+  svg.topo { display: block; width: 100%; min-width: 900px; max-height: 82vh; height: auto; touch-action: none; user-select: none; }
+
+  .t-grid { fill: var(--grid); }
+  .t-zone { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 6 5; }
+  .t-zone-label { font: 600 13px var(--display); letter-spacing: 0.14em; fill: var(--muted); text-transform: uppercase; }
+  .t-cloud { fill: var(--cloud-fill); stroke: var(--cloud); stroke-width: 1.5; }
+  .t-cloud-label { font: 700 15px var(--display); letter-spacing: 0.12em; fill: var(--cloud); }
+  .t-link { stroke: var(--line); stroke-width: 2; fill: none; }
+  .t-link.backbone { stroke: var(--cloud); stroke-width: 4; opacity: .55; }
+  .t-link.dashed { stroke-dasharray: 5 5; }
+  .t-link-label { font: 500 11px var(--mono); fill: var(--muted); }
+  .t-node rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+  .t-node .n1 { font: 600 14px var(--body); fill: var(--ink); }
+  .t-node .n2 { font: 400 11.5px var(--mono); fill: var(--muted); }
+  .t-node.pick { cursor: pointer; }
+  .t-node.pick:hover rect, .t-node.pick:focus rect { stroke: var(--accent); }
+  .t-node.device rect { fill: var(--surface-2); }
+  .t-node.isp rect { fill: var(--surface-2); stroke-dasharray: 4 3; }
+  .t-node.src rect { stroke: var(--accent); stroke-width: 3; }
+  .t-node.dst rect { stroke: var(--accent); stroke-width: 3; }
+  .t-node.pending rect { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 5 3; }
+  .t-pop circle { fill: var(--surface); stroke: var(--cloud); stroke-width: 2.5; }
+  .t-pop .n1 { font: 700 13px var(--display); letter-spacing: 0.06em; fill: var(--cloud); }
+  .t-pop .n2 { font: 400 11px var(--mono); fill: var(--muted); }
+  .t-pop.on circle { stroke: var(--accent); stroke-width: 3.5; }
+  .t-flow { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 12 9; animation: flow 1s linear infinite; }
+  .t-flow-glow { fill: none; stroke: var(--accent); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; opacity: .14; }
+  .t-flow.blocked { stroke: var(--bad); }
+  .t-flow-glow.blocked { stroke: var(--bad); }
+  .t-arrow { fill: var(--accent); }
+  .t-arrow.blocked { fill: var(--bad); }
+  .t-rubber { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 6 5; fill: none; }
+  .t-badge { pointer-events: none; }
+  .t-badge circle { fill: var(--accent); }
+  .t-badge text { font: 700 12px var(--body); fill: var(--surface); }
+  .t-x { stroke: var(--bad); stroke-width: 4; stroke-linecap: round; }
+  @keyframes flow { to { stroke-dashoffset: -21; } }
+  @media (prefers-reduced-motion: reduce) { .t-flow { animation: none; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 22px; height: 0; border-top: 3px solid var(--line); }
+  .sw.bb { border-color: var(--cloud); }
+  .sw.fl { border-top: 3px dashed var(--accent); }
+
+  /* Results */
+  .results {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-areas: "head head" "steps feats";
+    align-items: start;
+  }
+  .results .res-head { grid-area: head; }
+  .results .sect-steps { grid-area: steps; border-bottom: 0; border-right: 1px solid var(--line); }
+  .results .sect-feats { grid-area: feats; border-bottom: 0; }
+  .results .sect-feats .feats { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  @media (max-width: 900px) {
+    .results { grid-template-columns: 1fr; grid-template-areas: "head" "steps" "feats"; }
+    .results .sect-steps { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+  .res-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+  .res-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .res-title h2 { margin: 0; font: 700 24px/1.15 var(--display); text-wrap: balance; }
+  .verdict {
+    font: 600 12.5px/1 var(--body);
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .v-allow { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+  .v-rule { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .v-publish { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .v-local { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .v-block { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+  .v-na { color: var(--na); background: color-mix(in srgb, var(--na) 12%, transparent); }
+  .res-why { margin: 0; color: var(--muted); max-width: 70ch; }
+  .res-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn {
+    font: 500 13px/1 var(--body);
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+
+  .sect { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+  .sect:last-child { border-bottom: 0; }
+  .sect h3 { margin: 0; font: 600 13px var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+  ol.steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; }
+  .num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--surface);
+    font: 700 12.5px var(--body);
+  }
+  .step-at { font: 600 13.5px var(--body); }
+  .step-tx { font-size: 14px; color: var(--ink); }
+  .where {
+    display: inline-block;
+    font: 500 11.5px/1 var(--mono);
+    padding: 4px 7px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--surface-2);
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .where.pop { color: var(--cloud); border-color: color-mix(in srgb, var(--cloud) 45%, transparent); }
+  .where.sock { color: var(--ink); }
+  .where.client { color: var(--info); border-color: color-mix(in srgb, var(--info) 45%, transparent); }
+  .where.ext { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+
+  .feats { display: grid; gap: 10px; }
+  .feat { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; display: grid; gap: 6px; background: var(--surface); }
+  .feat-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+  .feat-h b { font: 600 15px var(--body); }
+  .feat p { margin: 0; font-size: 14px; }
+  .warn { color: var(--bad); font-size: 13.5px; }
+  .kb { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+  .kb a { color: var(--cloud); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--cloud) 35%, transparent); }
+  .kb a:hover { border-bottom-color: var(--cloud); }
+  .kb a::after { content: " ↗"; font-size: 11px; }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+  /* Feature categories */
+  .cat-net { --c: var(--c-net); } .cat-fw { --c: var(--c-fw); } .cat-threat { --c: var(--c-threat); }
+  .cat-data { --c: var(--c-data); } .cat-pub { --c: var(--c-pub); } .cat-ops { --c: var(--c-ops); }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 12.5px/1.25 var(--body); color: var(--ink); text-align: left;
+    background: color-mix(in srgb, var(--c) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    border-radius: 7px; padding: 5px 8px; cursor: pointer;
+  }
+  .tag::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); flex: none; }
+  .tag.static { cursor: default; font-size: 11.5px; padding: 3px 7px; }
+  .tag.hl, button.tag:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .pipe { padding: 12px 16px 14px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+  .pipe h3 { margin: 0; font: 600 13px var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .pipe-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+  .pcol {
+    flex: 1 1 180px; max-width: 280px; display: grid; gap: 6px; align-content: start;
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface-2);
+  }
+  .pcol.pop { border-color: color-mix(in srgb, var(--cloud) 50%, transparent); background: var(--cloud-fill); }
+  .pcol-h { display: flex; align-items: center; gap: 8px; font: 600 14px/1.2 var(--body); }
+  .pcol-h small { display: block; font: 400 11.5px var(--mono); color: var(--muted); }
+  .pcol .num { width: 22px; height: 22px; font-size: 11.5px; flex: none; }
+  .parrow { align-self: center; color: var(--muted); font-size: 18px; }
+  .pipe-empty { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .t-dot { fill: var(--c); stroke: var(--surface); stroke-width: 1.5; }
+  .t-node.hl rect { stroke: var(--accent); stroke-width: 4; }
+  .t-pop.hl circle { stroke: var(--accent); stroke-width: 5; }
+  .feat-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .feat.hl { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .feat.flash { animation: flash 1.4s ease; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 4px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @media (prefers-reduced-motion: reduce) { .feat.flash { animation: none; border-color: var(--accent); } }
+
+  .foot { color: var(--muted); font-size: 12.5px; max-width: 100ch; }
+  .toast { font-size: 13px; color: var(--ok); align-self: center; }
+
+  /* MPLS / Alternative WAN */
+  .t-link.mpls { stroke: var(--c-pub); stroke-width: 3; stroke-dasharray: 2 5; stroke-linecap: round; }
+  .t-mpls rect { fill: color-mix(in srgb, var(--c-pub) 10%, var(--surface)); stroke: var(--c-pub); stroke-width: 1.5; }
+  .t-mpls text { font: 600 13px var(--display); letter-spacing: 0.1em; fill: var(--c-pub); }
+  .t-mpls.on rect, .t-mpls.hl rect { stroke: var(--accent); stroke-width: 3; }
+  .sw.mp { border-top: 3px dotted var(--c-pub); }
+  .v-mpls { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+
+  /* Cato core and SPACE */
+  .t-link.core { stroke: var(--cloud); stroke-width: 5; opacity: .45; }
+  .t-space .ring { fill: var(--cloud-fill); stroke: var(--cloud); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .t-space .core { fill: var(--surface); stroke: var(--cloud); stroke-width: 3; }
+  .t-space .n1 { font: 700 16px var(--display); letter-spacing: 0.06em; fill: var(--cloud); }
+  .t-space .n2 { font: 400 11px var(--mono); fill: var(--muted); }
+  .t-space.on .core { stroke: var(--accent); stroke-width: 4; }
+  .t-space.hl .core { stroke: var(--accent); stroke-width: 6; }
+
+  /* Side panels inside the diagram */
+  .t-panel { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+  .t-panel-title { font: 700 14px var(--display); letter-spacing: 0.12em; fill: var(--ink); }
+  .t-panel-sub { font: 400 11px var(--mono); fill: var(--muted); }
+  .t-panel-empty { font: 500 13px var(--body); fill: var(--muted); }
+  .t-ptag { cursor: pointer; }
+  .t-ptag > rect:first-child { fill: color-mix(in srgb, var(--c) 10%, var(--surface)); stroke: color-mix(in srgb, var(--c) 45%, transparent); stroke-width: 1; }
+  .t-ptag .sq { fill: var(--c); }
+  .t-ptag .nm { font: 500 12.5px var(--body); fill: var(--ink); }
+  .t-ptag .wh { font: 400 10.5px var(--mono); fill: var(--muted); }
+  .t-ptag:hover > rect:first-child, .t-ptag.hl > rect:first-child, .t-ptag:focus > rect:first-child { stroke: var(--accent); stroke-width: 2; }
+  .t-ptag:focus { outline: none; }
+
+  /* Fit the header, controls and diagram on one screen */
+  .wrap { padding-block: 12px 32px; gap: 12px; }
+  h1 { font-size: clamp(24px, 2.6vw, 32px); }
+  .lede { font-size: 14px; max-width: 110ch; }
+  .controls { padding: 10px 14px; gap: 8px; }
+  .chip { padding: 7px 11px; font-size: 12.5px; }
+  .seg button { padding: 8px 11px; }
+  .hint { padding: 6px 14px; min-height: 34px; font-size: 13px; }
+  svg.topo { max-height: max(560px, calc(100vh - 235px)); }
+
+  /* Combined features panel */
+  .t-panel-rule { stroke: var(--line); stroke-width: 1; }
+  .t-panel-sec { font: 700 13px var(--display); letter-spacing: 0.12em; fill: var(--ink); }
+  .t-panel-core { fill: var(--surface); stroke: var(--cloud); stroke-width: 3; }
+  .t-panel-edge { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.5; }
+  .t-ptag .nm { font-size: 12px; }
+  .v-rbi { color: var(--c-threat); background: color-mix(in srgb, var(--c-threat) 12%, transparent); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">SASE study lab</span>
+      <h1>Cato Flow Lab</h1>
+      <p class="lede">Drag a line between two points on the network, or click one and then the other. The lab traces the path through the Cato Cloud, MPLS or the open internet, and shows which features act on it, where they run, and the Knowledge Base articles to read.</p>
+    </div>
+    <p class="disclaimer">Unofficial study aid, not affiliated with Cato Networks. A simplified model: real behaviour depends on account settings and software version.</p>
+  </header>
+
+  <div class="main">
+    <section class="panel stage" aria-label="Network diagram">
+      <div class="controls">
+        <div class="row">
+          <span class="label">Try a flow</span>
+          <div class="chips" id="presets"></div>
+        </div>
+        <div class="row">
+          <span class="label">Traffic</span>
+          <div class="seg" id="type" role="group" aria-label="Traffic type">
+            <button type="button" data-v="web" aria-pressed="true">Web / HTTPS</button>
+            <button type="button" data-v="file" aria-pressed="false">File transfer</button>
+            <button type="button" data-v="voice" aria-pressed="false">Voice &amp; video</button>
+            <button type="button" data-v="admin" aria-pressed="false">RDP / SSH</button>
+          </div>
+          <label class="toggle" for="tls"><input type="checkbox" id="tls" checked> TLS inspection on</label>
+        </div>
+        <div class="row" id="pubRow" hidden>
+          <span class="label">Publish via</span>
+          <div class="seg" id="pub" role="group" aria-label="Publishing method">
+            <button type="button" data-v="rpf" aria-pressed="true">RPF (Cato IP)</button>
+            <button type="button" data-v="lpf" aria-pressed="false">LPF (HQ ISP IP, direct)</button>
+          </div>
+        </div>
+        <div class="row" id="wanRow" hidden>
+          <span class="label">WAN path</span>
+          <div class="seg" id="wan" role="group" aria-label="WAN transport">
+            <button type="button" data-v="cloud" aria-pressed="true">Cato Cloud</button>
+            <button type="button" data-v="altwan" aria-pressed="false">Alternative WAN (MPLS)</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint" id="hint" aria-live="polite"></div>
+      <div class="canvas-scroll">
+        <svg class="topo" id="topo" viewBox="0 0 1180 830" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ and Branch B."></svg>
+      </div>
+      <div class="legend">
+        <span class="tag static cat-net">Connectivity</span>
+        <span class="tag static cat-fw">Firewall</span>
+        <span class="tag static cat-threat">Threat prevention</span>
+        <span class="tag static cat-data">Data protection</span>
+        <span class="tag static cat-pub">Publishing</span>
+        <span class="tag static cat-ops">Troubleshooting</span>
+      </div>
+      <div class="legend">
+        <span><i class="sw"></i> Link or tunnel</span>
+        <span><i class="sw bb"></i> PoP to Cato core (SPACE)</span>
+        <span><i class="sw mp"></i> MPLS (Alternative WAN)</span>
+        <span><i class="sw fl"></i> Your traffic flow</span>
+        <span>Panel on the right: features for the drawn flow (hover to locate, click for details)</span>
+      </div>
+    </section>
+
+    <section class="panel results" id="results" aria-live="polite"></section>
+  </div>
+
+  <p class="foot">Built from Cato's public Knowledge Base and Learning Center. Limits quoted here (DLP 50 MB inline, anti-malware and sandbox 100 MB, Newly Registered Domains thresholds of 7 to 60 days, no TCP Acceleration on Alternative WAN rules) were current when this lab was made. SPACE is drawn once in the centre for clarity; in Cato it runs inside every PoP. Always confirm in the linked articles and your own account.</p>
+</div>
+
+<script>
+(() => {
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  // ---------- Knowledge Base links ----------
+  const KB = {
+    lanfw: ['Socket LAN Firewall policy', 'https://support.catonetworks.com/hc/en-us/articles/10642755314205-Configuring-the-Socket-LAN-Firewall-Policy'],
+    inetfw: ['What is the Cato Internet Firewall?', 'https://support.catonetworks.com/hc/en-us/articles/4413273486865-What-is-the-Cato-Internet-Firewall'],
+    fwrec: ['Internet and WAN Firewall recommendations', 'https://support.catonetworks.com/hc/en-us/articles/360004274777-Recommendations-for-Internet-and-WAN-Firewall-Policies'],
+    netrules: ['Configuring Network Rules', 'https://support.catonetworks.com/hc/en-us/articles/7785698733341-Configuring-Network-Rules'],
+    tcpacc: ['TCP Acceleration and best practices', 'https://support.catonetworks.com/hc/en-us/articles/360006675977-Explaining-the-Cato-TCP-Acceleration-and-Best-Practices'],
+    scanner: ['Scanners report unexpected open ports', 'https://support.catonetworks.com/hc/en-us/articles/21324947793053-Network-Scanner-Reports-Unexpected-Open-TCP-Ports'],
+    ips: ['Configuring the IPS Policy', 'https://support.catonetworks.com/hc/en-us/articles/4413273489809-Configuring-the-IPS-Policy'],
+    dnsprot: ['DNS protections for IPS', 'https://knowledge.catonetworks.com/docs/customizing-the-dns-protections-for-ips'],
+    phish: ['Anti-phishing protections', 'https://support.catonetworks.com/hc/en-us/articles/31563850053405-What-are-Cato-Anti-Phishing-Protections'],
+    am: ['What is the Anti-Malware Policy?', 'https://support.catonetworks.com/hc/en-us/articles/4413280529297-What-is-the-Cato-Anti-Malware-Policy'],
+    sandbox: ['Scanning files in the Sandbox', 'https://knowledge.catonetworks.com/docs/scanning-files-in-the-sandbox'],
+    dlp: ['What is the Cato DLP Service?', 'https://support.catonetworks.com/hc/en-us/articles/5606495447197-What-is-the-Cato-DLP-Service'],
+    dlptr: ['DLP troubleshooting (TLS, QUIC, file limits)', 'https://knowledge.catonetworks.com/docs/dlp-troubleshooting'],
+    secsvc: ['Cato Security Services', 'https://knowledge.catonetworks.com/docs/en/cato-security-services'],
+    ranges: ['Configuring Network Ranges for a Site', 'https://support.catonetworks.com/hc/en-us/articles/4413280508433-Configuring-Network-Ranges-for-a-Site'],
+    bgp: ['Using BGP in the Cato Cloud', 'https://support.catonetworks.com/hc/en-us/articles/7825408860573-Using-BGP-in-the-Cato-Cloud'],
+    bgpipsec: ['BGP neighbors for an IPsec connection', 'https://support.catonetworks.com/hc/en-us/articles/4413280509457-Configuring-BGP-Neighbors-for-an-IPsec-Connection'],
+    bfd: ['Configuring BFD for BGP neighbors', 'https://knowledge.catonetworks.com/docs/en/configuring-bfd-for-bgp-neighbors'],
+    ikev2: ['Configuring IPsec IKEv2 Sites', 'https://support.catonetworks.com/hc/en-us/articles/4413265635473-Configuring-IPsec-IKEv2-Sites'],
+    rpf: ['Configuring Remote Port Forwarding', 'https://support.catonetworks.com/hc/en-us/articles/7784979714333-Configuring-Remote-Port-Forwarding-for-the-Account'],
+    rpfsec: ['Security and QoS recommendations for RPF', 'https://support.catonetworks.com/hc/en-us/articles/360004514358-Security-and-QoS-Recommendations-for-RPF'],
+    ddos: ['Third-party DDoS in front of RPF', 'https://knowledge.catonetworks.com/docs/en/how-to-integrate-third-party-ddos-services-for-internet-facing-rpf-traffic'],
+    lpf: ['Configuring Local Port Forwarding', 'https://support.catonetworks.com/hc/en-us/articles/4413265637393-Configuring-Local-Port-Forwarding-for-a-Site'],
+    allocip: ['Allocating IP addresses for the account', 'https://support.catonetworks.com/hc/en-us/articles/4413273467153-Allocating-IP-Addresses-for-the-Account'],
+    prereq: ['Socket connection prerequisites', 'https://support.catonetworks.com/hc/en-us/articles/360000891085-Cato-Socket-Connection-Prerequisites-and-Known-Limitations'],
+    altport: ['Alternate UDP port for DTLS', 'https://support.catonetworks.com/hc/en-us/articles/35977957054749-Using-an-Alternate-UDP-Port-for-Socket-and-Client-DTLS-Traffic'],
+    clientfb: ['Client TCP fallback for the UDP tunnel', 'https://support.catonetworks.com/hc/en-us/articles/360002577917-Client-TCP-Fallback-for-UDP-Tunnel'],
+    capture: ['How to capture traffic on a Socket', 'https://support.catonetworks.com/hc/en-us/articles/4413265670673-How-to-Capture-Traffic-on-a-Socket'],
+    ilmm: ['What is Cato ILMM?', 'https://support.catonetworks.com/hc/en-us/articles/6249243964445-What-is-Cato-ILMM'],
+    restricted: ['Restricted countries list', 'https://knowledge.catonetworks.com/docs/restricted-countries-list'],
+    wanrec: ['Socket site resiliency with WAN Recovery', 'https://support.catonetworks.com/hc/en-us/articles/360011141077-Socket-Site-Resiliency-with-WAN-Recovery'],
+    altwan: ['Integrating Cato with an Alt. WAN network', 'https://knowledge.catonetworks.com/docs/integrating-cato-with-an-alt-wan-network'],
+    s2s: ['Site-to-site WAN connectivity with the Cato Cloud', 'https://support.catonetworks.com/hc/en-us/articles/10629854488093-Site-to-Site-WAN-Connectivity-with-the-Cato-Cloud'],
+    offcloud: ['Routing traffic to an off-cloud link', 'https://knowledge.catonetworks.com/docs/routing-traffic-to-an-off-cloud-link'],
+    rbi: ['Securing browsing sessions through RBI', 'https://support.catonetworks.com/hc/en-us/articles/9797956517533-Securing-Browsing-Sessions-Through-RBI'],
+    rbicfg: ['Configuring the RBI service for browsing', 'https://knowledge.catonetworks.com/docs/configuring-the-rbi-service-for-browsing-sessions'],
+    rbipriv: ['Controlling access to private apps through RBI', 'https://support.catonetworks.com/hc/en-us/articles/31524638654749-Controlling-Access-to-Private-Apps-Through-RBI'],
+    privacc: ['What is Cato Private Access?', 'https://support.catonetworks.com/hc/en-us/articles/34310201240989-What-Is-Cato-Private-Access'],
+    privpol: ['Configuring the Private Access Policy', 'https://support.catonetworks.com/hc/en-us/articles/35809693069213-Configuring-the-Private-Access-Policy'],
+    privapp: ['Configuring Private Applications', 'https://support.catonetworks.com/hc/en-us/articles/35809663100317-Configuring-Private-Applications'],
+    appconn: ['Working with App Connectors', 'https://knowledge.catonetworks.com/docs/working-with-app-connectors'],
+    portal: ['Browser Application Portal overview', 'https://knowledge.catonetworks.com/docs/browser-application-portal-overview-securing-remote-access-to-applications']
+  };
+
+  // [title, Knowledge Base links, category]
+  const FEAT = {
+    transport: ['Socket tunnel (DTLS)', ['prereq', 'altport', 'ilmm'], 'net'],
+    clienttunnel: ['Cato Client tunnel', ['clientfb'], 'net'],
+    vsocket: ['vSocket in the cloud network', ['ranges', 'bgp'], 'net'],
+    ipsec: ['IPsec site (IKEv2) with BGP', ['ikev2', 'bgpipsec', 'bfd'], 'net'],
+    altwan: ['Alternative WAN (MPLS)', ['altwan', 's2s', 'offcloud'], 'net'],
+    netrules: ['Network rules', ['netrules'], 'net'],
+    tcpacc: ['TCP Acceleration', ['tcpacc', 'scanner'], 'net'],
+    qos: ['Priority and packet loss mitigation', ['netrules'], 'net'],
+    msa: ['Hidden MSA block rule', ['inetfw', 'restricted'], 'fw'],
+    inetfw: ['Internet Firewall', ['inetfw', 'fwrec'], 'fw'],
+    wanfw: ['WAN Firewall', ['fwrec'], 'fw'],
+    lanfw: ['Socket LAN Firewall', ['lanfw'], 'fw'],
+    tls: ['TLS inspection', ['dlptr', 'secsvc'], 'threat'],
+    ips: ['IPS', ['ips', 'dnsprot', 'phish'], 'threat'],
+    am: ['Anti-Malware, NG Anti-Malware and Sandbox', ['am', 'sandbox'], 'threat'],
+    dlp: ['CASB and DLP', ['dlp', 'dlptr'], 'data'],
+    egress: ['Egress public IP', ['allocip'], 'net'],
+    routing: ['Routing between sites', ['ranges', 'bgp'], 'net'],
+    rpf: ['Remote Port Forwarding (RPF)', ['rpf', 'rpfsec', 'ddos'], 'pub'],
+    lpf: ['Local Port Forwarding (LPF)', ['lpf'], 'pub'],
+    doublenat: ['ISP router port forward', ['prereq'], 'pub'],
+    internetonly: ['"Internet Only" range', ['ranges'], 'net'],
+    capture: ['Troubleshooting: Socket traffic capture', ['capture'], 'ops'],
+    resilience: ['Link and PoP failover', ['wanrec'], 'net'],
+    rbi: ['Remote Browser Isolation (RBI)', ['rbi', 'rbicfg', 'rbipriv'], 'threat'],
+    privaccess: ['Private Access policy', ['privacc', 'privpol', 'privapp'], 'fw'],
+    appconn: ['App Connector', ['appconn', 'privapp'], 'net'],
+    portal: ['Browser Access portal', ['portal'], 'net']
+  };
+  const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
+  // Evaluation order used when listing several features at one enforcement point.
+  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
+
+  // ---------- Topology ----------
+  // Endpoints (pick: true) can be a flow's source or destination; devices, PoPs, SPACE and MPLS carry traffic.
+  // SPACE (Single Pass Cloud Engine) runs inside every Cato PoP. The lab draws it once, in the centre, as the
+  // core every PoP connects to, so each security feature has one clear place on the diagram.
+  const N = {
+    contractor: { label: 'Contractor laptop', sub: 'unmanaged · browser', type: 'contractor', pop: 'fra', x: 830, y: 70, pick: true },
+    risky:  { label: 'Risky website', sub: 'uncategorized · new', type: 'saas', risky: true, x: 435, y: 70, pick: true },
+    papp:   { label: 'Private app', sub: 'erp.corp.local', type: 'papp', site: 'dcapps', edge: 'appc', x: 102, y: 310, pick: true },
+    appc:   { label: 'App Connector', sub: 'group DC-1', type: 'connector', pop: 'tor', x: 239, y: 310 },
+    cloud:  { label: 'Cloud VPC / VNet', sub: 'AWS · Azure · GCP', type: 'cloud', site: 'cloud', edge: 'vsCloud', x: 620, y: 70, pick: true },
+    saas:   { label: 'Internet & SaaS', sub: 'M365 · Salesforce', type: 'saas', x: 265, y: 70, pick: true },
+    inet:   { label: 'Anyone on the internet', sub: 'e.g. 3.3.3.3', type: 'inbound', x: 95, y: 70, pick: true },
+    vsCloud:{ label: 'vSocket', sub: '172.31.0.0/16', type: 'socket', pop: 'lon', x: 620, y: 160 },
+    space:  { label: 'Cato SPACE', sub: 'single pass cloud engine', type: 'space', x: 590, y: 362 },
+    tor:    { label: 'PoP', sub: 'Toronto', type: 'pop', x: 395, y: 345 },
+    lon:    { label: 'PoP', sub: 'London', type: 'pop', x: 590, y: 252 },
+    fra:    { label: 'PoP', sub: 'Frankfurt', type: 'pop', x: 785, y: 345 },
+    tyo:    { label: 'PoP', sub: 'Tokyo', type: 'pop', x: 478, y: 462 },
+    chi:    { label: 'PoP', sub: 'Chicago', type: 'pop', x: 702, y: 462 },
+    isp:    { label: 'ISP router', sub: 'public 2.2.2.2', type: 'isp', x: 215, y: 515 },
+    servers:{ label: 'Server VLAN', sub: '192.168.20.0/24', type: 'lan', site: 'hq', edge: 'sockDC', x: 90, y: 592, pick: true },
+    dmz:    { label: 'Web server', sub: '192.168.50.20 · DMZ', type: 'dmz', site: 'hq', edge: 'sockDC', x: 90, y: 688, pick: true },
+    sockDC: { label: 'Socket', sub: 'HQ / DC', type: 'socket', pop: 'tor', mpls: true, x: 225, y: 640 },
+    users:  { label: 'Users VLAN', sub: '10.10.10.0/24', type: 'lan', site: 'branchA', edge: 'sockA', x: 370, y: 592, pick: true },
+    guest:  { label: 'Guest Wi-Fi', sub: '10.10.99.0/24 · guest', type: 'guest', site: 'branchA', edge: 'sockA', x: 370, y: 688, pick: true },
+    sockA:  { label: 'Socket', sub: 'Branch A', type: 'socket', pop: 'tor', x: 500, y: 640 },
+    usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 715, y: 592, pick: true },
+    sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 625, y: 688 },
+    lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 915, y: 592, pick: true },
+    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 860, y: 688 },
+    remote: { label: 'Remote user', sub: 'Cato Client · laptop', type: 'remote', site: 'remote', pop: 'tor', x: 110, y: 470, pick: true },
+    mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 425, y: 790 }
+  };
+  const BOX = { end: [150, 50], dev: [100, 44], isp: [118, 44], mpls: [460, 36] };
+  const MPLS_Y = 790;
+  // The HQ ISP link: from the internet over the top and down the far left edge to the ISP router, never through Cato.
+  const ISP_WAYPOINTS = [{ x: 5, y: 70 }, { x: 5, y: 515 }];
+  // One features panel on the right of the Cato Cloud: CATO SPACE on top, AT THE EDGE below.
+  const PANEL = { x: 898, y: 112, w: 272, h: 424 };
+  const SHORT = {
+    transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'Alternative WAN (MPLS)',
+    netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', msa: 'MSA block rule',
+    inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
+    am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
+    rpf: 'Remote Port Forwarding', lpf: 'Local Port Forwarding', doublenat: 'ISP port forward',
+    internetonly: 'Internet Only range', capture: 'Traffic capture', resilience: 'Link & PoP failover',
+    rbi: 'Remote Browser Isolation', privaccess: 'Private Access policy', appconn: 'App Connector', portal: 'Browser Access portal'
+  };
+
+  const LINKS = [
+    ['cloud', 'vsCloud'], ['vsCloud', 'lon', 'DTLS', null, 0.45],
+    ['tor', 'space', null, 'core'], ['lon', 'space', null, 'core'], ['fra', 'space', null, 'core'],
+    ['tyo', 'space', null, 'core'], ['chi', 'space', null, 'core'],
+    ['space', 'saas', 'egress', null, 0.62], ['saas', 'inet', null, 'dashed'],
+    ['servers', 'sockDC'], ['dmz', 'sockDC'], ['sockDC', 'tor', 'DTLS', null, 0.5], ['sockDC', 'isp', null, 'dashed'],
+    ['users', 'sockA'], ['guest', 'sockA'], ['sockA', 'tor', 'DTLS · UDP 443', null, 0.5],
+    ['usersB', 'sockB'], ['sockB', 'tyo', 'DTLS', null, 0.4],
+    ['lanC', 'fwC'], ['fwC', 'chi', 'IPsec + BGP', null, 0.75],
+    ['remote', 'tor', 'Client tunnel', 'dashed', 0.45],
+    ['papp', 'appc'], ['appc', 'tor', 'outbound', 'dashed', 0.55],
+    ['contractor', 'fra', 'HTTPS to portal', 'dashed', 0.55],
+    ['space', 'risky', null, null]
+  ];
+
+  // [label, source, destination, options]
+  const PRESETS = [
+    ['Branch user to SaaS', 'users', 'saas'],
+    ['Branch user to risky site (RBI)', 'users', 'risky'],
+    ['Branch A to HQ servers', 'users', 'servers'],
+    ['Remote user to private app', 'remote', 'papp'],
+    ['Contractor to private app (browser)', 'contractor', 'papp'],
+    ['Remote user to HQ servers', 'remote', 'servers'],
+    ['Tokyo branch to HQ over MPLS', 'usersB', 'servers', { wan: 'altwan' }],
+    ['Tokyo branch to HQ via Cato', 'usersB', 'servers', { wan: 'cloud' }],
+    ['Internet to server via LPF', 'inet', 'dmz', { pub: 'lpf' }],
+    ['Internet to server via RPF', 'inet', 'dmz', { pub: 'rpf' }],
+    ['Cloud VPC to Tokyo branch', 'cloud', 'usersB'],
+    ['IPsec branch to cloud VPC', 'lanC', 'cloud'],
+    ['Guest Wi-Fi to Users VLAN', 'guest', 'users'],
+    ['Guest Wi-Fi to HQ', 'guest', 'servers']
+  ];
+
+  const state = { src: 'users', dst: 'saas', type: 'web', tls: true, pub: 'rpf', wan: 'cloud', pending: null };
+
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const svg = $('topo');
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const boxOf = (k) => (N[k].type === 'isp' ? BOX.isp : N[k].type === 'mpls' ? BOX.mpls : N[k].pick ? BOX.end : BOX.dev);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const popOf = (k) => (N[k].edge ? N[N[k].edge].pop : N[k].pop);
+  const popName = (p) => `${N[p].label} ${N[p].sub}`;
+  const mplsPair = (a, b) => !!(N[a].edge && N[b].edge && N[N[a].edge].mpls && N[N[b].edge].mpls && N[a].edge !== N[b].edge);
+
+  // ---------- Static drawing ----------
+  let layerFlow, layerRubber, layerBadges, layerPanels, spaceLine1, spaceLine2;
+  const nodeEls = {};
+
+  function zone(x, y, w, h, label) {
+    el('rect', { x, y, width: w, height: h, rx: 14, class: 't-zone' }, svg);
+    el('text', { x: x + 12, y: y + 20, class: 't-zone-label' }, svg).textContent = label;
+  }
+
+  function drawStatic() {
+    const defs = el('defs', {}, svg);
+    const pat = el('pattern', { id: 'dots', width: 22, height: 22, patternUnits: 'userSpaceOnUse' }, defs);
+    el('circle', { cx: 2, cy: 2, r: 1.2, class: 't-grid' }, pat);
+    const mk = el('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: 7, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', class: 't-arrow' }, mk);
+    el('rect', { x: 0, y: 0, width: 1180, height: 830, fill: 'url(#dots)' }, svg);
+
+    // Zones along the bottom
+    zone(10, 545, 270, 210, 'HQ / Data center · Toronto');
+    zone(290, 545, 265, 210, 'Branch A · Toronto');
+    zone(565, 545, 230, 210, 'Branch B · Tokyo');
+    zone(805, 545, 195, 210, 'Branch C · Chicago');
+    el('text', { x: 110, y: 434, 'text-anchor': 'middle', class: 't-zone-label' }, svg).textContent = 'On the road';
+    zone(22, 255, 276, 105, 'Private apps · Toronto DC');
+
+    // Cato Cloud: every PoP connects to the shared core, where SPACE inspects the traffic
+    el('rect', { x: 305, y: 205, width: 570, height: 310, rx: 110, class: 't-cloud' }, svg);
+    el('text', { x: 652, y: 234, class: 't-cloud-label' }, svg).textContent = 'CATO CLOUD';
+    el('text', { x: 590, y: 506, 'text-anchor': 'middle', class: 't-link-label' }, svg).textContent = 'SPACE runs in every PoP';
+
+    // MPLS (Alternative WAN) between HQ and Branch B
+    const m = N.mpls, [mw, mh] = BOX.mpls;
+    el('line', { x1: N.sockDC.x, y1: N.sockDC.y, x2: N.sockDC.x, y2: MPLS_Y, class: 't-link mpls' }, svg);
+    el('line', { x1: N.sockB.x, y1: N.sockB.y, x2: N.sockB.x, y2: MPLS_Y, class: 't-link mpls' }, svg);
+    const mg = el('g', { class: 't-mpls', 'data-key': 'mpls' }, svg);
+    el('rect', { x: m.x - mw / 2, y: m.y - mh / 2, width: mw, height: mh, rx: mh / 2 }, mg);
+    el('text', { x: m.x, y: m.y + 5, 'text-anchor': 'middle' }, mg).textContent = 'MPLS · Alternative WAN';
+    nodeEls.mpls = mg;
+
+    // HQ ISP link, outside Cato
+    el('polyline', {
+      points: [N.inet, ...ISP_WAYPOINTS, N.isp].map((p) => `${p.x},${p.y}`).join(' '),
+      class: 't-link dashed', opacity: '0.7'
+    }, svg);
+    el('text', { x: 15, y: 170, 'text-anchor': 'middle', class: 't-link-label', transform: 'rotate(-90 15 170)' }, svg).textContent = 'HQ ISP link (outside Cato)';
+
+    for (const [a, b, label, kind, at = 0.5] of LINKS) {
+      const A = N[a], B = N[b];
+      el('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: 't-link' + (kind ? ' ' + kind : '') }, svg);
+      if (label) {
+        const t = el('text', { x: A.x + (B.x - A.x) * at, y: A.y + (B.y - A.y) * at - 7, 'text-anchor': 'middle', class: 't-link-label' }, svg);
+        t.textContent = label;
+      }
+    }
+
+    layerFlow = el('g', {}, svg);
+
+    for (const k in N) {
+      const n = N[k];
+      if (n.type === 'mpls') continue;
+      if (n.type === 'space') {
+        const g = el('g', { class: 't-space', 'data-key': k }, svg);
+        el('circle', { cx: n.x, cy: n.y, r: 70, class: 'ring' }, g);
+        el('circle', { cx: n.x, cy: n.y, r: 56, class: 'core' }, g);
+        el('text', { x: n.x, y: n.y - 6, 'text-anchor': 'middle', class: 'n1' }, g).textContent = 'Cato SPACE';
+        spaceLine1 = el('text', { x: n.x, y: n.y + 11, 'text-anchor': 'middle', class: 'n2' }, g);
+        spaceLine1.textContent = 'single pass';
+        spaceLine2 = el('text', { x: n.x, y: n.y + 25, 'text-anchor': 'middle', class: 'n2' }, g);
+        spaceLine2.textContent = 'cloud engine';
+        nodeEls[k] = g;
+        continue;
+      }
+      if (n.type === 'pop') {
+        const g = el('g', { class: 't-pop', 'data-key': k }, svg);
+        el('circle', { cx: n.x, cy: n.y, r: 36 }, g);
+        el('text', { x: n.x, y: n.y - 2, 'text-anchor': 'middle', class: 'n1' }, g).textContent = n.label;
+        el('text', { x: n.x, y: n.y + 14, 'text-anchor': 'middle', class: 'n2' }, g).textContent = n.sub;
+        nodeEls[k] = g;
+        continue;
+      }
+      const [w, h] = boxOf(k);
+      const cls = ['t-node', n.pick ? 'pick' : 'device', n.type === 'isp' ? 'isp' : ''].join(' ').trim();
+      const g = el('g', { class: cls, 'data-key': k }, svg);
+      if (n.pick) {
+        g.setAttribute('data-pick', k);
+        g.setAttribute('tabindex', '0');
+        g.setAttribute('role', 'button');
+        g.setAttribute('aria-label', `${n.label}, ${n.sub}`);
+      }
+      el('rect', { x: n.x - w / 2, y: n.y - h / 2, width: w, height: h, rx: n.pick ? 10 : 8 }, g);
+      el('text', { x: n.x, y: n.y - 3, 'text-anchor': 'middle', class: 'n1' }, g).textContent = n.label;
+      el('text', { x: n.x, y: n.y + 14, 'text-anchor': 'middle', class: 'n2' }, g).textContent = n.sub;
+      nodeEls[k] = g;
+    }
+
+    layerBadges = el('g', {}, svg);
+    layerPanels = el('g', {}, svg);
+    layerRubber = el('g', { 'pointer-events': 'none' }, svg);
+  }
+
+  // ---------- Paths ----------
+  function upTo(k) {
+    const n = N[k];
+    if (n.type === 'remote' || n.type === 'contractor') return [k, n.pop];
+    return [k, n.edge, N[n.edge].pop];
+  }
+  function wanPath(s, d) {
+    const a = upTo(s), b = upTo(d).reverse();
+    return a.concat(['space'], b);
+  }
+
+  // ---------- Analysis ----------
+  function where(label) {
+    const cls = /PoP|Cloud|SPACE|core/.test(label) ? 'pop' : /Client/.test(label) ? 'client' : /ISP|FW|internet|MPLS/i.test(label) ? 'ext' : 'sock';
+    return `<span class="where ${cls}">${esc(label)}</span>`;
+  }
+
+  function analyze(s, d, o) {
+    const S = N[s], D = N[d];
+    const r = { title: `${S.label} → ${D.label}`, verdict: null, why: '', steps: [], feats: [], options: [], path: [], blocked: false, dropReason: '' };
+    const F = (id, at, note, warn) => { if (!r.feats.some((f) => f.id === id)) r.feats.push({ id, at, note, warn }); };
+    const tcp = o.type !== 'voice';
+    const webish = o.type === 'web' || o.type === 'file';
+    const hasSocket = (k) => ['lan', 'guest', 'dmz', 'cloud'].includes(N[k].type);
+    const siteName = (k) => (N[k].edge ? N[N[k].edge].sub : N[k].label);
+
+    function transport(k) {
+      const t = N[k].type;
+      if (t === 'remote') F('clienttunnel', 'Cato Client', 'Encrypted DTLS tunnel from the laptop to the nearest PoP. Falls back to a TCP 443 tunnel when UDP is blocked (hotels, guest Wi-Fi).');
+      else if (t === 'cloud') F('vsocket', 'vSocket', 'A virtual Socket inside the VPC or VNet. The design is the same in AWS, Azure and GCP: deploy the vSocket from the marketplace image and point the route table at it for the ranges that should go through Cato.');
+      else if (t === 'ipsecsite') F('ipsec', 'IPsec FW', 'A site with a third-party firewall instead of a Socket connects with standard IPsec (IKEv2 recommended). Run BGP over the tunnel and add BFD for fast failover. Security still runs in the PoP.');
+      else F('transport', 'Socket', 'Outbound DTLS on UDP 443, falling back to UDP 1337. Needs UDP 53, UDP 443 and TCP 443 out. Works behind NAT, but give multi-link Sockets public IPs. ILMM watches the ISP link for you.');
+    }
+    function firstStep(k) {
+      const n = N[k];
+      if (n.type === 'remote') return { at: k, where: 'Cato Client', text: 'The Cato Client captures the traffic on the laptop and sends it into its encrypted tunnel to the nearest PoP, Toronto.' };
+      if (n.type === 'cloud') return { at: k, where: n.label, text: 'The VPC or VNet route table sends this traffic to the vSocket. The setup is the same in AWS, Azure and GCP.' };
+      if (n.type === 'ipsecsite') return { at: k, where: n.label, text: 'A device in Branch C sends it to the local firewall, which owns the IPsec tunnel to Cato.' };
+      return { at: k, where: n.label, text: `A device in ${n.label} (${n.sub}) sends the packet to its default gateway, the ${N[n.edge].sub} Socket.` };
+    }
+    function edgeStep(k, outbound) {
+      const n = N[k];
+      if (n.type === 'remote') return null;
+      const e = n.edge, pop = popName(N[e].pop);
+      if (n.type === 'ipsecsite') {
+        return outbound
+          ? { at: e, where: 'Branch C FW', text: `The firewall encrypts it into the IPsec IKEv2 tunnel to ${pop}. Routes come from BGP over the tunnel.` }
+          : { at: e, where: 'Branch C FW', text: 'The PoP sends it down the IPsec tunnel; the Branch C firewall decrypts it and forwards it to the LAN.' };
+      }
+      const dev = n.type === 'cloud' ? 'vSocket' : 'Socket';
+      return outbound
+        ? { at: e, where: dev, text: `The ${dev} matches network rules (which link, which PoP, what priority) and wraps the packet in DTLS to ${pop}. No security inspection happens here.` }
+        : { at: e, where: dev, text: `The ${dev} unwraps the tunnel and delivers the packet to ${n.label}.` };
+    }
+    function finalStep(k) {
+      const n = N[k];
+      if (n.type === 'remote') return { at: k, where: 'Cato Client', text: 'The PoP sends it down the Client tunnel to the remote laptop.' };
+      return { at: k, where: n.label, text: `Delivered to ${n.label} (${n.sub}).` };
+    }
+    function addCommon() {
+      F('netrules', 'Socket + PoP', 'Pick the transport, link, PoP and priority for this traffic. Bypass or local-breakout rules send traffic straight out and skip every Cato security engine, so keep them rare and documented.');
+      if (o.type === 'voice') F('qos', 'Socket + PoP', 'Give voice and video high priority. Packet loss mitigation duplicates packets on lossy links. UDP is not TCP-accelerated.');
+      if (tcp) F('tcpacc', 'SPACE', 'SPACE splits the TCP session at the PoP to speed up long-distance and lossy paths. Turn it off with a narrow rule for vulnerability scanners and TCP health checks: the proxy can make closed ports look open.');
+    }
+
+    if (s === d) return null;
+
+    // ----- Private apps (Cato Private Access) and the unmanaged contractor laptop
+    if (S.type === 'papp') {
+      r.verdict = ['na', 'Not how it works'];
+      r.why = "The App Connector only carries sessions that authorized users open to the app. The app doesn't use it to reach anything.";
+      r.path = [s];
+      return r;
+    }
+    if (D.type === 'contractor') {
+      r.verdict = ['na', 'Not how it works'];
+      r.why = 'Nothing connects into an unmanaged contractor laptop. It only opens sessions to the Browser Access portal.';
+      r.path = [d];
+      return r;
+    }
+    if (S.type === 'contractor' && D.type !== 'papp') {
+      if (D.type === 'saas' || D.type === 'inbound') {
+        r.verdict = ['na', 'Outside your Cato account'];
+        r.why = "An unmanaged laptop browses through its own internet connection, so Cato doesn't see this traffic. Cato only sees the contractor when they open your Browser Access portal.";
+        r.path = [s];
+        return r;
+      }
+      r.verdict = ['block', 'No network access'];
+      r.blocked = true;
+      r.why = 'Unmanaged devices get no network-level access. Publish only the app they need as a private app in the Browser Access portal.';
+      r.dropReason = 'unmanaged device, no network access';
+      r.dropShort = 'no network access';
+      r.path = [s, S.pop, 'space'];
+      r.steps.push({ at: s, where: 'Contractor', text: 'Without the Cato Client there is no tunnel into your network, so the connection has nowhere to go.' });
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: 'Only private apps published in the portal and allowed by the Private Access policy are reachable.' });
+      F('portal', 'PoP', 'Gives contractors and other unmanaged devices access to specific HTTP/S, RDP or SSH apps from a browser, with no client install and no network access.');
+      F('privaccess', 'SPACE', 'Rules list which users or groups may reach which private apps, optionally with device posture. Anything not allowed is blocked.');
+      return r;
+    }
+    if (D.type === 'papp' && S.type !== 'inbound') {
+      if (S.type !== 'remote' && S.type !== 'contractor') {
+        r.verdict = ['na', 'Use the WAN instead'];
+        r.why = 'Private Access with App Connectors is built for remote users with the Cato Client and for unmanaged devices in the browser portal. Office users reach internal apps over the WAN: try a flow to the HQ servers.';
+        r.path = [s];
+        return r;
+      }
+      r.verdict = ['rule', 'Needs a Private Access allow rule'];
+      r.path = upTo(s).concat(['space', N.appc.pop, 'appc', d]);
+      if (S.type === 'remote') {
+        r.why = 'Zero trust access: the user reaches this one app, not the network behind it. SPACE checks the Private Access policy for the user, group and device, and Cato brokers the session to the App Connector in the data center.';
+        r.steps.push({ at: s, where: 'Cato Client', text: 'The Cato Client sends the request for erp.corp.local into its encrypted tunnel to PoP Toronto.' });
+        r.steps.push({ at: S.pop, where: popName(S.pop), text: `${popName(S.pop)} terminates the Client tunnel and hands the request to SPACE.` });
+        F('clienttunnel', 'Cato Client', 'Encrypted DTLS tunnel from the laptop to the nearest PoP. Falls back to a TCP 443 tunnel when UDP is blocked.');
+      } else {
+        r.why = 'Clientless zero trust access: the contractor opens the Browser Access portal, signs in, and reaches only the published app. With RBI for private apps, the app runs in an isolated browser so nothing is stored on the unmanaged laptop.';
+        r.steps.push({ at: s, where: 'Contractor', text: 'The contractor opens your Browser Access portal URL and signs in with your identity provider. Nothing is installed on the laptop.' });
+        r.steps.push({ at: S.pop, where: popName(S.pop), text: `The portal is served from the Cato Cloud; ${popName(S.pop)} is nearest to the contractor.` });
+        F('portal', 'PoP', 'Browser access to private apps over HTTP/S, RDP or SSH. Good for contractors and third parties on unmanaged devices; Cato proxies the session.');
+        F('rbi', 'SPACE', 'RBI can also protect private apps: the app is rendered in an isolated browser in the Cato Cloud, so data stays off the unmanaged laptop.');
+      }
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: 'SPACE applies the Private Access policy: is this user or group allowed to this app, and does the device pass the posture checks? Anything not allowed is blocked.' });
+      r.steps.push({ at: N.appc.pop, where: popName(N.appc.pop), text: `Cato brokers the session to ${popName(N.appc.pop)}, where the App Connector group for this app is connected.` });
+      r.steps.push({ at: 'appc', where: 'App Connector', text: 'The App Connector, which only makes outbound connections to Cato, resolves the published app domain with the data center DNS and opens the session to the app.' });
+      r.steps.push({ at: d, where: 'Private app', text: 'The user reaches erp.corp.local. Nothing else in the data center network is reachable.' });
+      F('privaccess', 'SPACE', 'A Private App object links the published app domain to the internal address and an App Connector group. Policy rules allow users or groups, optionally with device posture; everything else is blocked.');
+      F('appconn', 'App Connector', 'Lightweight connector in the app environment that connects outbound to Cato, so the data center needs no inbound rules and is not added to the WAN. Put two connectors in the group for high availability.');
+      F('ips', 'SPACE', 'Private Access traffic still runs through the threat prevention engines in SPACE.');
+      return r;
+    }
+
+    // ----- Sources outside your network
+    if (S.type === 'saas') {
+      r.verdict = ['na', 'Not how it works'];
+      r.why = `${S.label} can't open connections into your network. Your users open the session from inside, and the replies come back on that same session.`;
+      r.steps.push({ at: s, where: S.label, text: 'Use Reverse direction to see how users reach it through the Cato Cloud.' });
+      r.path = [s];
+      return r;
+    }
+    if (S.type === 'inbound') {
+      if (D.type === 'saas') {
+        r.verdict = ['na', 'Outside your Cato account'];
+        r.why = 'Both ends are on the public internet, so this traffic never touches your Cato Cloud.';
+        r.path = [s, d];
+        return r;
+      }
+      if (D.type === 'dmz') {
+        r.verdict = ['publish', 'Needs a publishing rule'];
+        if (o.pub === 'rpf') {
+          r.why = 'Remote Port Forwarding publishes the server on a Cato allocated public IP. SPACE matches the RPF rule and inspects the connection with IPS, then PoP Toronto sends it down the HQ Socket tunnel.';
+          r.path = [s, 'space', 'tor', 'sockDC', d];
+          r.steps.push({ at: s, where: 'Internet', text: 'The client connects to your Cato allocated public IP. Your public DNS record points there.' });
+          r.steps.push({ at: 'space', where: 'Cato SPACE', text: 'SPACE matches the RPF rule (allowed source IPs, port) and runs IPS on the inbound traffic. Inbound TLS is not decrypted.' });
+          r.steps.push({ at: 'tor', where: 'PoP Toronto', text: "PoP Toronto, the HQ's PoP, sends it down the HQ Socket's DTLS tunnel." });
+          r.steps.push({ at: 'sockDC', where: 'Socket', text: 'The HQ Socket delivers it to 192.168.50.20:443.' });
+          r.steps.push({ at: d, where: 'Web server', text: 'The server replies and the reply returns the same way, so there is no asymmetric routing.' });
+          F('rpf', 'SPACE', 'Publishes the server on a Cato allocated IP that stays up even if one HQ link fails. Avoid Any as the source; allow-list known IPs. For a public site, put a third-party DDoS/WAF service in front and allow only its ranges.');
+          F('ips', 'SPACE', 'IPS inspects inbound RPF traffic with reputation and signatures. TLS inspection is not done on inbound traffic, so the server must handle its own HTTPS security.');
+          transport('dmz');
+          F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see whether the request arrives and the reply leaves.');
+        } else {
+          r.why = "Local Port Forwarding publishes the server directly on the HQ's own ISP address. Traffic goes internet → ISP router → Socket → server and never touches a Cato PoP.";
+          r.path = [s, ...ISP_WAYPOINTS, 'isp', 'sockDC', d];
+          r.steps.push({ at: s, where: 'Internet', text: 'The client connects straight to the HQ ISP address 2.2.2.2. Your public DNS record points there.' });
+          r.steps.push({ at: 'isp', where: 'ISP router', text: 'Double NAT: the ISP router forwards TCP 443 to the Socket WAN IP 10.1.1.1. With the modem in bridge mode the Socket owns 2.2.2.2 and this step disappears.' });
+          r.steps.push({ at: 'sockDC', where: 'Socket', text: 'The Socket LPF rule forwards port 443 to 192.168.50.20. No PoP is involved, so no Cato cloud security runs on this traffic.' });
+          r.steps.push({ at: d, where: 'Web server', text: 'The reply leaves through the same Socket WAN and ISP router back to the client.' });
+          F('lpf', 'Socket', "Uses the site's ISP IP: one public IP per WAN link, tied to that link. Needs a static IP (no CGNAT). Good for small, known-source services; poor for public sites.", 'No Cato inspection on this path. The server must protect itself: patching, TLS, local firewall, allow-listed sources.');
+          F('doublenat', 'ISP router', 'Forward only the published port to the Socket WAN IP and keep that IP fixed (static or DHCP reservation). Never forward UDP 443 or 1337, which the Socket uses for its tunnel. Use split DNS for internal users.');
+          F('capture', 'Socket', 'Capture on the WAN and LAN interfaces together in the Socket WebUI to confirm the forward happens.');
+        }
+        return r;
+      }
+      r.verdict = ['block', 'Not reachable from the internet'];
+      r.blocked = true;
+      r.why = `Nothing inside your Cato network is published by default, so ${D.label} can't be reached from the internet. Staff should use the Cato Client instead of publishing anything.`;
+      r.path = [s, 'space'];
+      r.dropReason = 'no RPF rule publishes it';
+      r.dropShort = 'no RPF rule publishes it';
+      r.steps.push({ at: s, where: 'Internet', text: 'The client can only reach Cato public IPs, and no Remote Port Forwarding rule maps one to this destination.' });
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: 'With no matching RPF rule, inbound connections from the internet are dropped. Nothing inside your network is published by default.' });
+      r.options.push({ id: 'rpf', at: 'SPACE', note: 'If a server really must be public, publish only that server and port on a Cato allocated IP, with an allow-list of sources. SPACE then inspects it with IPS.' });
+      r.options.push({ id: 'lpf', at: 'Socket', note: "Or publish it on the site's own static ISP IP with LPF. Simpler, but the traffic bypasses Cato security." });
+      if (D.type === 'remote' || D.type === 'lan' || D.type === 'guest') r.options.push({ id: 'clienttunnel', at: 'Cato Client', note: 'For people rather than servers, publishing is the wrong tool: staff connect out with the Cato Client and reach what they need through the WAN Firewall or Private Access.' });
+      return r;
+    }
+
+    // ----- Servers and cloud workloads to a risky site: nobody is browsing, so block instead of isolating
+    if (D.risky && (s === 'servers' || s === 'dmz' || S.type === 'cloud')) {
+      r.verdict = ['block', 'Block it for servers'];
+      r.blocked = true;
+      r.dropReason = 'Internet Firewall block rule';
+      r.dropShort = 'Internet Firewall block';
+      r.why = "RBI isolates a person's browser. Servers and cloud workloads have nobody browsing, so the usual policy is an Internet Firewall rule that blocks uncategorized and newly registered sites for server ranges.";
+      r.path = upTo(s).concat(['space']);
+      r.steps.push(firstStep(s));
+      const es = edgeStep(s, true);
+      if (es) r.steps.push(es);
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: 'SPACE matches the Internet Firewall rule that blocks uncategorized and newly registered destinations for server ranges, so the connection is refused.' });
+      transport(s);
+      F('msa', 'SPACE', "Runs before your own rules and can't be seen or edited. Blocks traffic Cato's Master Service Agreement defines as illegal or malicious.");
+      F('inetfw', 'SPACE', 'Server ranges should only reach the internet destinations they need (updates, APIs). Block uncategorized, undefined and newly registered sites for them, and keep RBI for user ranges.');
+      F('ips', 'SPACE', 'Newly Registered Domains in the IPS DNS protections can also block domains younger than 7, 14, 21, 30 or 60 days.');
+      return r;
+    }
+
+    // ----- Destinations on the internet
+    if (D.type === 'saas' || D.type === 'inbound') {
+      r.verdict = D.risky ? ['rbi', 'Opened in isolation (RBI)'] : ['allow', 'Allowed unless you block it'];
+      r.why = D.risky
+        ? 'An Internet Firewall rule with the Remote Browsing action sends uncategorized and undefined sites to an isolated browser in the Cato Cloud. All active web content runs there; only a safe visual stream reaches the user.'
+        : 'Internet-bound traffic runs through the full security stack in SPACE. The Internet Firewall ends with an implicit allow, so add block rules for what you do not want.';
+      const pop = popOf(s);
+      r.path = upTo(s).concat(['space', d]);
+      r.steps.push(firstStep(s));
+      const e = edgeStep(s, true);
+      if (e) r.steps.push(e);
+      r.steps.push({ at: pop, where: popName(pop), text: `${popName(pop)} terminates the tunnel and hands the traffic to SPACE in the Cato core.` });
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: D.risky
+        ? 'SPACE matches the Internet Firewall rule with the Remote Browsing action. The page runs in an isolated browser in the Cato Cloud, and only a safe visual stream is sent back to the user.'
+        : 'SPACE inspects it in a single pass: hidden MSA block, Internet Firewall, TLS inspection, IPS, anti-malware, then CASB and DLP.' });
+      r.steps.push({ at: d, where: 'Internet', text: "The packet leaves Cato NATed to a Cato public IP (shared, or your allocated IP), not to the site's ISP address." });
+      if (S.type === 'guest') r.why += ' The Guest Wi-Fi range is marked Internet Only, so it gets internet access but no route to other sites.';
+      if (S.type === 'dmz') r.why += ' Outbound traffic from the web server also leaves with a Cato IP, not with 2.2.2.2.';
+      if (S.type === 'ipsecsite') r.why += ' This assumes the Branch C firewall sends its default route over the IPsec tunnel, so its internet traffic is protected by Cato too.';
+      transport(s);
+      addCommon();
+      F('msa', 'SPACE', "Runs before your own rules and can't be seen or edited. Blocks traffic Cato's Master Service Agreement defines as illegal or malicious.");
+      if (D.risky) {
+        F('inetfw', 'SPACE', 'Add a rule for the Uncategorized, Undefined or a custom category with the Remote Browsing action. The rule must not include other apps or categories. Set a fallback action (block or prompt) for when RBI cannot run.');
+        F('rbi', 'SPACE', 'Protects against phishing, malware, malicious ads and cross-site scripting without blocking the site. HTML and JavaScript run in the Cato Cloud, not on the laptop.');
+      }
+      F('inetfw', 'SPACE', S.type === 'remote'
+        ? 'Same policy as the offices. Rules can match the user or group, the device and the application. Implicit allow at the bottom.'
+        : "Implicit allow at the bottom: anything you don't block is allowed. Start with block rules for risky categories (anonymizers, malware, phishing, P2P).");
+      if (webish) {
+        F('tls', 'SPACE', o.tls
+          ? "The PoP decrypts HTTPS so IPS, anti-malware and DLP can see inside. Block QUIC (UDP 443) for users, or browsers will use HTTP/3, which can't be inspected."
+          : 'Off: HTTPS stays encrypted, so the engines below only see names and metadata.', o.tls ? null : 'Turn TLS inspection on for this traffic, or DLP and anti-malware will miss most of it.');
+      }
+      F('ips', 'SPACE', 'Signatures, reputation and DNS protections. Newly Registered Domains can block domains younger than 7, 14, 21, 30 or 60 days; its default action is monitor only.');
+      if (webish) {
+        F('am', 'SPACE', 'Two layers: a signature engine and SentinelOne NG Anti-Malware, plus the Sandbox for unknown files. Files up to 100 MB are scanned.', o.tls ? null : 'Without TLS inspection, files downloaded over HTTPS are not scanned.');
+        F('dlp', 'SPACE', 'Inline DLP scans files up to 50 MB. Audio, video and binary files are skipped; password-protected files are detected but not opened. CASB controls actions inside SaaS apps (upload, share, login).', o.tls ? null : 'DLP needs TLS inspection to see uploads to HTTPS sites.');
+      }
+      F('egress', 'SPACE', "Traffic leaves with a Cato public IP. Allocate dedicated IPs when partners or SaaS allow-list your address. Your own public IP range can't be announced from Cato.");
+      if (hasSocket(s)) F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see where packets stop.');
+      F('resilience', 'Socket + PoP', 'If a link or PoP fails, the Socket moves its tunnels to another link or the next PoP automatically.');
+      return r;
+    }
+
+    // ----- Both ends internal: same Socket
+    if (S.edge && S.edge === D.edge) {
+      r.path = [s, S.edge, d];
+      r.steps.push({ at: s, where: S.label, text: `A device in ${S.label} sends the packet to the Socket, its gateway for both ranges.` });
+      r.steps.push({ at: S.edge, where: 'Socket', text: 'Both ranges are on this Socket, so it routes the packet locally. It never goes to a PoP.' });
+      r.steps.push(finalStep(d));
+      if (S.type === 'guest' || D.type === 'guest') {
+        r.verdict = ['local', 'Local: block it here'];
+        r.why = 'Traffic between VLANs on the same Socket is handled by the Socket LAN Firewall. Guest Wi-Fi and staff networks should not talk, so add a block rule.';
+        F('lanfw', 'Socket', 'Add a rule that blocks Guest Wi-Fi ↔ internal ranges. The LAN Firewall is the only Cato control for this traffic because it never leaves the site.');
+      } else {
+        r.verdict = ['local', 'Stays inside the site'];
+        r.why = 'Traffic between ranges on the same Socket stays local. The Socket LAN Firewall decides, and cloud engines such as IPS and anti-malware never see it.';
+        F('lanfw', 'Socket', 'Allow only what the DMZ needs (for example web server → database port). Deep inspection of this east-west traffic would mean sending it to a PoP.');
+      }
+      F('capture', 'Socket', 'Capture on the two LAN interfaces or VLANs together in the Socket WebUI.');
+      return r;
+    }
+
+    // ----- Guest network is Internet Only
+    if (S.type === 'guest' || D.type === 'guest') {
+      r.verdict = ['block', 'Blocked by design'];
+      r.blocked = true;
+      r.why = 'The Guest Wi-Fi range is marked Internet Only. Cato keeps it out of the global routing table, so it can reach the internet but no other site, and no site can reach it.';
+      r.dropReason = 'no route (Internet Only range)';
+      r.dropShort = 'no route: Internet Only';
+      r.path = upTo(s).concat(['space']);
+      r.steps.push(firstStep(s));
+      const eg = edgeStep(s, true);
+      if (eg) r.steps.push(eg);
+      r.steps.push({ at: 'space', where: 'Cato SPACE', text: "The account's global routing table has no route between the Guest range (Internet Only) and other sites, so the traffic is dropped." });
+      F('internetonly', 'Cato core', 'Internet Only ranges get internet access through Cato but are not added to the global routing table. Use this for guest and untrusted networks.');
+      if (S.type === 'guest') F('lanfw', 'Socket', 'Also block Guest ↔ internal VLANs on the same Socket, which the routing table does not cover.');
+      return r;
+    }
+
+    // ----- Site to site over MPLS (Alternative WAN)
+    if (o.wan === 'altwan' && mplsPair(s, d)) {
+      const ea = S.edge, eb = D.edge;
+      r.verdict = ['mpls', 'Direct over MPLS, no PoP'];
+      r.why = 'A network rule sends this traffic over the Alternative WAN link: Socket to Socket across MPLS in an encrypted UDP tunnel. It never reaches a PoP or SPACE, so the WAN Firewall and threat engines do not inspect it.';
+      r.path = [s, ea, { x: N[ea].x, y: MPLS_Y }, { x: N[eb].x, y: MPLS_Y }, eb, d];
+      r.steps.push(firstStep(s));
+      r.steps.push({ at: ea, where: 'Socket', text: `A network rule matches with Alternative WAN as the primary transport (Cato Cloud as secondary for failover). The ${N[ea].sub} Socket sends it out its MPLS interface.` });
+      r.steps.push({ at: 'mpls', where: 'MPLS', text: "The packet crosses the MPLS provider's network inside an encrypted UDP tunnel between the two Sockets. The MPLS router learns the Socket addresses in its VRF." });
+      r.steps.push({ at: eb, where: 'Socket', text: `The ${N[eb].sub} Socket unwraps the tunnel and delivers the packet.` });
+      r.steps.push(finalStep(d));
+      F('altwan', 'MPLS', 'Integrates an existing MPLS network with Cato. Common uses: keep voice on MPLS, or use MPLS as the backup when the internet links fail. If MPLS goes down, the secondary transport moves the traffic to the Cato Cloud.', 'This path skips SPACE: no WAN Firewall, IPS or anti-malware. Keep it for trusted, latency-sensitive traffic.');
+      F('netrules', 'Socket', 'Set the primary transport to Alternative WAN and the secondary to Cato Cloud (or the reverse to use MPLS only as backup). Some accounts send all VoIP over MPLS this way.');
+      if (o.type === 'voice') F('qos', 'Socket', 'Bandwidth priority still applies on the MPLS link. MPLS gives predictable latency for voice and video.');
+      if (tcp) F('tcpacc', 'Socket', 'Not available here: TCP Acceleration is greyed out on rules that use Alternative WAN, because no PoP proxies the session.');
+      F('lanfw', 'Socket', 'The only Cato firewall that can still filter this traffic is the LAN Firewall on each Socket. Use it if MPLS traffic needs restricting.');
+      F('capture', 'Socket', 'Capture the LAN and MPLS interfaces on both Sockets to confirm the traffic takes the MPLS path.');
+      return r;
+    }
+
+    // ----- Site to site, users and clouds through the Cato Cloud
+    r.path = wanPath(s, d);
+    const sPop = popOf(s), dPop = popOf(d);
+    r.verdict = ['rule', 'Needs a WAN Firewall allow rule'];
+    r.why = 'Between your own sites, users and clouds, the WAN Firewall ends with an implicit block. Nothing passes until you add an allow rule for this flow.';
+    if (mplsPair(s, d)) r.why += ' These two sites also share an MPLS link: switch the WAN path to Alternative WAN to compare.';
+    r.steps.push(firstStep(s));
+    const e1 = edgeStep(s, true);
+    if (e1) r.steps.push(e1);
+    r.steps.push({ at: sPop, where: popName(sPop), text: `${popName(sPop)} terminates the tunnel and passes the traffic into the Cato core.` });
+    r.steps.push({ at: 'space', where: 'Cato SPACE', text: "SPACE looks up the destination in the account's global routing table, checks the WAN Firewall, then runs IPS (and anti-malware for files) on the allowed traffic." });
+    r.steps.push({ at: dPop, where: popName(dPop), text: sPop !== dPop
+      ? `The core carries it to ${popName(dPop)}, the PoP that serves the destination.`
+      : `It returns to ${popName(dPop)}, which also serves the destination.` });
+    const e2 = edgeStep(d, false);
+    if (e2) { r.steps.push(e2); r.steps.push(finalStep(d)); } else r.steps.push(finalStep(d));
+
+    transport(s);
+    transport(d);
+    const viaBgp = [S, D].some((n) => n.type === 'ipsecsite' || n.type === 'cloud');
+    F('routing', 'Cato core', viaBgp
+      ? 'Site ranges and BGP-learned routes (from the IPsec branch and the cloud network) go into one global routing table in the Cato Cloud. Summary routes keep the table small. Ranges must be unique across the account.'
+      : "Each site's ranges (native, VLAN and routed) go into one global routing table in the Cato Cloud. Sockets don't exchange routes with each other; the PoPs do the routing. Ranges must be unique across the account.");
+    F('wanfw', 'SPACE', S.type === 'remote'
+      ? 'Implicit block. Allow this with a rule that matches the user or group (and device posture if needed), not just an IP range.'
+      : 'Implicit block. Add an allow rule for this source, destination and service. Use site and user groups so new sites inherit access.');
+    addCommon();
+    F('ips', 'SPACE', 'IPS also inspects east-west traffic between sites, users and clouds once the WAN Firewall allows it.');
+    if (o.type === 'file') F('am', 'SPACE', 'Anti-malware scans files moving between sites (WAN traffic) as well as internet downloads, up to 100 MB per file.');
+    if (hasSocket(s) || hasSocket(d)) F('capture', 'Socket', 'Capture the LAN and the SD-WAN tunnel together on each Socket. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the far end.');
+    F('resilience', 'Socket + PoP', 'Sockets move to another link or PoP on failure; the backbone reroutes between PoPs.');
+    return r;
+  }
+
+  // ---------- Where each feature runs on the diagram ----------
+  function featureMap(r) {
+    const keys = r.path.filter((p) => typeof p === 'string');
+    const socks = keys.filter((k) => N[k].type === 'socket');
+    const sock = socks[0];
+    const pop = keys.find((k) => N[k].type === 'pop');
+    const ipsecDev = keys.find((k) => N[k].type === 'ipsecdev');
+    const edge = sock || (keys.includes('remote') ? 'remote' : null);
+    const vs = keys.filter((k) => /^vs/.test(k));
+    const nodesFor = (f) => {
+      // On the MPLS path, Socket features run on both Sockets.
+      if (r.verdict && r.verdict[0] === 'mpls' && /^Socket/.test(f.at)) return socks;
+      return ({
+        'Socket': [sock], 'PoP': [pop], 'SPACE': ['space'], 'Cato core': ['space'], 'Socket + PoP': [edge, pop],
+        'Cato Client': ['remote'], 'vSocket': vs.length ? vs : [], 'IPsec FW': [ipsecDev], 'ISP router': ['isp'], 'MPLS': ['mpls'], 'App Connector': ['appc']
+      }[f.at] || []).filter(Boolean);
+    };
+    const byNode = {}, byFeat = {};
+    for (const f of r.feats) {
+      byFeat[f.id] = nodesFor(f);
+      for (const k of byFeat[f.id]) (byNode[k] = byNode[k] || []).push(f);
+    }
+    for (const k in byNode) byNode[k].sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const order = [...new Set(keys)].filter((k) => byNode[k]);
+    if (byNode.mpls && !order.includes('mpls')) {
+      const i = order.indexOf(socks[0]);
+      order.splice(i + 1, 0, 'mpls');
+    }
+    for (const k in byNode) if (!order.includes(k)) order.push(k);
+    return { byNode, byFeat, order };
+  }
+
+  function highlight(nodes, id, on) {
+    nodes.forEach((k) => nodeEls[k] && nodeEls[k].classList.toggle('hl', on));
+    const card = document.getElementById('feat-' + id);
+    if (card) card.classList.toggle('hl', on);
+    document.querySelectorAll('.t-ptag[data-feat="' + id + '"]').forEach((t) => t.classList.toggle('hl', on));
+  }
+
+  // ---------- Rendering ----------
+  function pathPoints(path) {
+    return path.map((p) => (typeof p === 'string' ? { x: N[p].x, y: N[p].y, key: p } : p));
+  }
+
+  function renderFlow(r) {
+    layerFlow.replaceChildren();
+    layerBadges.replaceChildren();
+    for (const k in nodeEls) nodeEls[k].classList.remove('src', 'dst', 'on', 'pending', 'hl', 'dropped');
+    spaceLine1.textContent = 'single pass';
+    spaceLine1.classList.remove('drop');
+    spaceLine2.textContent = 'cloud engine';
+    if (state.pending) nodeEls[state.pending].classList.add('pending');
+    if (!r) return;
+    nodeEls[state.src].classList.add('src');
+    nodeEls[state.dst].classList.add('dst');
+
+    const pts = pathPoints(r.path);
+    pts.forEach((p) => { if (p.key && ['pop', 'space'].includes(N[p.key].type)) nodeEls[p.key].classList.add('on'); });
+    if (r.verdict[0] === 'mpls') nodeEls.mpls.classList.add('on');
+    if (pts.length > 1) {
+      // Build the path. When traffic enters SPACE from a PoP and comes back out to the same PoP, the two legs
+      // are drawn as curves bending to opposite sides so the round trip is visible.
+      const segs = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const prev = pts[i - 1], next = pts[i + 2];
+        const roundTrip = (b.key === 'space' && next && next.key && next.key === a.key)
+          || (a.key === 'space' && prev && prev.key && prev.key === b.key);
+        let c = null;
+        if (roundTrip) {
+          const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+          c = { x: (a.x + b.x) / 2 - (dy / len) * 30, y: (a.y + b.y) / 2 + (dx / len) * 30 };
+        }
+        segs.push({ a, b, c });
+      }
+      const d = `M${pts[0].x},${pts[0].y} ` + segs.map((sg) => (sg.c ? `Q${sg.c.x},${sg.c.y} ${sg.b.x},${sg.b.y}` : `L${sg.b.x},${sg.b.y}`)).join(' ');
+      el('path', { d, class: 't-flow-glow' + (r.blocked ? ' blocked' : '') }, layerFlow);
+      const fl = el('path', { d, class: 't-flow' + (r.blocked ? ' blocked' : '') }, layerFlow);
+      if (!r.blocked) fl.setAttribute('marker-end', 'url(#arrow)');
+      // A small arrow halfway along each leg shows the direction of travel.
+      for (const sg of segs) {
+        const { a, b, c } = sg;
+        if (Math.hypot(b.x - a.x, b.y - a.y) < 50) continue;
+        const px = c ? 0.25 * a.x + 0.5 * c.x + 0.25 * b.x : (a.x + b.x) / 2;
+        const py = c ? 0.25 * a.y + 0.5 * c.y + 0.25 * b.y : (a.y + b.y) / 2;
+        const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+        el('path', { d: 'M-6,-5 L6,0 L-6,5 z', transform: `translate(${px},${py}) rotate(${ang})`, class: 't-dir' + (r.blocked ? ' blocked' : '') }, layerFlow);
+      }
+      if (r.blocked) {
+        const last = pts[pts.length - 1];
+        if (last.key === 'space') {
+          nodeEls.space.classList.add('dropped');
+          spaceLine1.textContent = '\u2715 DROPPED';
+          spaceLine1.classList.add('drop');
+          spaceLine2.textContent = '';
+        } else {
+          el('line', { x1: last.x - 12, y1: last.y - 12, x2: last.x + 12, y2: last.y + 12, class: 't-x' }, layerFlow);
+          el('line', { x1: last.x - 12, y1: last.y + 12, x2: last.x + 12, y2: last.y - 12, class: 't-x' }, layerFlow);
+        }
+      }
+    }
+    // One coloured dot per feature under each enforcement point
+    const dropAtSpace = r.blocked && r.dropShort && r.path[r.path.length - 1] === 'space';
+    if (dropAtSpace) {
+      const pill = el('g', { class: 't-droppill' }, layerBadges);
+      const bg = el('rect', { y: N.space.y + 74, height: 22, rx: 11 }, pill);
+      const tx = el('text', { x: N.space.x, y: N.space.y + 89, 'text-anchor': 'middle' }, pill);
+      tx.textContent = r.dropShort;
+      let w = 170;
+      try { w = tx.getComputedTextLength() + 24; } catch (e) { /* keep the default width */ }
+      bg.setAttribute('x', N.space.x - w / 2);
+      bg.setAttribute('width', w);
+    }
+    for (const k in r.fm.byNode) {
+      if (dropAtSpace && k === 'space') continue;
+      const n = N[k], list = r.fm.byNode[k];
+      const gap = 11;
+      const y = n.type === 'space' ? n.y + 82 : n.type === 'pop' ? n.y + 46 : n.type === 'mpls' ? n.y - BOX.mpls[1] / 2 - 9 : n.y + boxOf(k)[1] / 2 + 9;
+      const x0 = n.x - ((list.length - 1) * gap) / 2;
+      list.forEach((f, i) => {
+        const c = el('circle', { cx: x0 + i * gap, cy: y, r: 4.5, class: 't-dot cat-' + FEAT[f.id][2] }, layerBadges);
+        el('title', {}, c).textContent = FEAT[f.id][0];
+      });
+    }
+    // Numbered badges at each step's location
+    const seen = {};
+    r.steps.forEach((st, i) => {
+      const n = N[st.at];
+      if (!n) return;
+      seen[st.at] = (seen[st.at] || 0) + 1;
+      let bx, by;
+      if (n.type === 'pop') { bx = n.x + 28; by = seen[st.at] > 1 ? n.y + 30 : n.y - 30; }
+      else if (n.type === 'space') { bx = n.x + 50; by = n.y - 50; }
+      else { const [w, h] = boxOf(st.at); bx = n.x + w / 2 - 6 - (seen[st.at] - 1) * 24; by = n.y - h / 2 - 2; }
+      const g = el('g', { class: 't-badge' }, layerBadges);
+      el('circle', { cx: bx, cy: by, r: 11 }, g);
+      el('text', { x: bx, y: by + 4, 'text-anchor': 'middle' }, g).textContent = String(i + 1);
+    });
+  }
+
+  // Side panels: what runs inside SPACE (left) and at the edge (right) for the current flow
+  function openCard(id) {
+    const card = document.getElementById('feat-' + id);
+    if (!card) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+    card.classList.remove('flash');
+    void card.offsetWidth;
+    card.classList.add('flash');
+  }
+
+  let r_current = null;
+  function row(g, P, y, it, label) {
+    const cat = FEAT[it.f.id][2];
+    const rw = el('g', { class: 't-ptag cat-' + cat, 'data-feat': it.f.id, tabindex: '0', role: 'button', 'aria-label': FEAT[it.f.id][0] + ', ' + it.f.at }, g);
+    el('rect', { x: P.x + 10, y, width: P.w - 20, height: 20, rx: 5 }, rw);
+    el('rect', { x: P.x + 17, y: y + 7, width: 6, height: 6, rx: 1.5, class: 'sq' }, rw);
+    el('text', { x: P.x + 29, y: y + 14, class: 'nm' }, rw).textContent = label;
+    if (it.where) el('text', { x: P.x + P.w - 17, y: y + 14, 'text-anchor': 'end', class: 'wh' }, rw).textContent = it.where;
+    const on = () => highlight(r_current.fm.byFeat[it.f.id] || [], it.f.id, true);
+    const off = () => highlight(r_current.fm.byFeat[it.f.id] || [], it.f.id, false);
+    rw.addEventListener('pointerenter', on);
+    rw.addEventListener('pointerleave', off);
+    rw.addEventListener('focus', on);
+    rw.addEventListener('blur', off);
+    rw.addEventListener('click', () => openCard(it.f.id));
+    rw.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(it.f.id); } });
+  }
+
+  function renderPanels(r) {
+    layerPanels.replaceChildren();
+    r_current = r;
+    if (!r) return;
+    const P = PANEL;
+    const sorted = (list) => list.slice().sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const inSpace = sorted(r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f }));
+    const edge = sorted(r.feats.filter((f) => !(r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f, where: f.at }));
+    const g = el('g', {}, layerPanels);
+    el('rect', { x: P.x, y: P.y, width: P.w, height: P.h, rx: 12, class: 't-panel' }, g);
+    el('text', { x: P.x + 14, y: P.y + 22, class: 't-panel-title' }, g).textContent = 'FEATURES ON THIS FLOW';
+    el('line', { x1: P.x, y1: P.y + 32, x2: P.x + P.w, y2: P.y + 32, class: 't-panel-rule' }, g);
+
+    // Section 1: CATO SPACE
+    let y = P.y + 50;
+    const sh = el('g', {}, g);
+    el('circle', { cx: P.x + 20, cy: y - 4, r: 6, class: 't-panel-core' }, sh);
+    el('text', { x: P.x + 32, y, class: 't-panel-sec' }, sh).textContent = 'CATO SPACE';
+    el('text', { x: P.x + P.w - 14, y, 'text-anchor': 'end', class: 't-panel-sub' }, sh).textContent = 'in order, one pass';
+    y += 10;
+    const rowH = 23;
+    const bottom = P.y + P.h - 10;
+    const edgeNeed = 34 + Math.max(1, edge.length) * rowH;
+    const spaceMax = Math.max(2, Math.floor((bottom - y - edgeNeed) / rowH));
+    if (r.blocked && r.dropReason) {
+      inSpace.slice(0, spaceMax).forEach((it, i) => { row(g, P, y, it, (i + 1) + '. ' + SHORT[it.f.id]); y += rowH; });
+      const t = el('text', { x: P.x + 14, y: y + 14, class: 't-panel-drop' }, g);
+      el('tspan', { x: P.x + 14, dy: 0 }, t).textContent = '\u2715 Dropped in SPACE:';
+      el('tspan', { x: P.x + 14, dy: 15 }, t).textContent = r.dropReason;
+      y += 36;
+    } else if (!inSpace.length) {
+      const why = r.verdict[0] === 'mpls' ? ['Goes Socket to Socket over MPLS:', 'SPACE never sees this flow.']
+        : r.verdict[0] === 'local' ? ['Stays on one Socket:', 'SPACE never sees this flow.']
+        : (r.verdict[0] === 'publish' && state.pub === 'lpf') ? ['LPF goes ISP router to Socket:', 'SPACE never sees this flow.']
+        : ['No SPACE feature acts on', 'this flow.'];
+      const t = el('text', { x: P.x + 14, y: y + 14, class: 't-panel-empty' }, g);
+      why.forEach((line, i) => { el('tspan', { x: P.x + 14, dy: i ? 16 : 0 }, t).textContent = line; });
+      y += 40;
+    } else {
+      inSpace.slice(0, spaceMax).forEach((it, i) => { row(g, P, y, it, (i + 1) + '. ' + SHORT[it.f.id]); y += rowH; });
+      if (inSpace.length > spaceMax) { el('text', { x: P.x + 14, y: y + 12, class: 't-panel-sub' }, g).textContent = `+${inSpace.length - spaceMax} more below the diagram`; y += 18; }
+    }
+
+    // Section 2: AT THE EDGE
+    y += 10;
+    el('line', { x1: P.x + 10, y1: y - 4, x2: P.x + P.w - 10, y2: y - 4, class: 't-panel-rule' }, g);
+    y += 14;
+    const eh = el('g', {}, g);
+    el('rect', { x: P.x + 14, y: y - 10, width: 12, height: 10, rx: 2, class: 't-panel-edge' }, eh);
+    el('text', { x: P.x + 32, y, class: 't-panel-sec' }, eh).textContent = 'AT THE EDGE';
+    el('text', { x: P.x + P.w - 14, y, 'text-anchor': 'end', class: 't-panel-sub' }, eh).textContent = 'where it runs';
+    y += 10;
+    const edgeMax = Math.max(1, Math.floor((bottom - y) / rowH));
+    if (!edge.length) {
+      el('text', { x: P.x + 14, y: y + 14, class: 't-panel-empty' }, g).textContent = 'Nothing runs at the edge.';
+    } else {
+      edge.slice(0, edgeMax).forEach((it) => { row(g, P, y, it, SHORT[it.f.id]); y += rowH; });
+      if (edge.length > edgeMax) el('text', { x: P.x + 14, y: y + 12, class: 't-panel-sub' }, g).textContent = `+${edge.length - edgeMax} more below the diagram`;
+    }
+  }
+
+  function renderResults(r) {
+    const box = $('results');
+    if (!r) {
+      box.innerHTML = '<div class="res-head"><div class="res-title"><h2>Pick two different points</h2></div><p class="res-why">Drag from one box to another, or click a source and then a destination.</p></div>';
+      return;
+    }
+    const steps = r.steps.map((st, i) => `
+      <li><span class="num">${i + 1}</span>
+        <div><div class="step-at">${esc(st.where || N[st.at].label)}</div><div class="step-tx">${esc(st.text)}</div></div>
+      </li>`).join('');
+    const card = (f, opt) => {
+      const [title, kbs, cat] = FEAT[f.id];
+      const links = kbs.map((k) => `<a href="${KB[k][1]}" target="_blank" rel="noopener noreferrer">${esc(KB[k][0])}</a>`).join('');
+      return `<article class="feat${opt ? ' opt' : ''}" ${opt ? '' : `id="feat-${f.id}"`} data-feat="${f.id}">
+        <div class="feat-h"><b>${esc(title)}</b><span class="feat-meta"><span class="tag static cat-${cat}">${CAT[cat]}</span>${where(f.at)}</span></div>
+        <p>${esc(f.note)}</p>
+        <div class="kb">${links}</div>
+      </article>`;
+    };
+    const opts = r.options.map((f) => card(f, true)).join('');
+    const feats = r.feats.map((f) => {
+      const [title, kbs, cat] = FEAT[f.id];
+      const links = kbs.map((k) => `<a href="${KB[k][1]}" target="_blank" rel="noopener noreferrer">${esc(KB[k][0])}</a>`).join('');
+      return `<article class="feat" id="feat-${f.id}" data-feat="${f.id}">
+        <div class="feat-h"><b>${esc(title)}</b><span class="feat-meta"><span class="tag static cat-${cat}">${CAT[cat]}</span>${where(f.at)}</span></div>
+        <p>${esc(f.note)}</p>
+        ${f.warn ? `<p class="warn">${esc(f.warn)}</p>` : ''}
+        <div class="kb">${links}</div>
+      </article>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="res-head">
+        <div class="res-title"><h2>${esc(r.title)}</h2><span class="verdict v-${r.verdict[0]}">${esc(r.verdict[1])}</span></div>
+        <p class="res-why">${esc(r.why)}</p>
+        <div class="res-actions">
+          <button type="button" class="btn" id="swap">Reverse direction</button>
+          <button type="button" class="btn" id="copy">Copy summary</button>
+          <span class="toast" id="toast" hidden>Copied</span>
+        </div>
+      </div>
+      ${steps ? `<div class="sect sect-steps"><h3>Path, hop by hop</h3><ol class="steps">${steps}</ol></div>` : ''}
+      ${feats || opts ? `<div class="sect sect-feats">${feats ? `<h3>Features involved</h3><div class="feats">${feats}</div>` : ''}${opts ? `<h3>To allow it</h3><div class="feats">${opts}</div>` : ''}</div>` : ''}`;
+    $('swap').addEventListener('click', () => setFlow(state.dst, state.src));
+    $('copy').addEventListener('click', () => copySummary(r));
+    box.querySelectorAll('.feat').forEach((c) => {
+      const id = c.dataset.feat, nodes = r.fm.byFeat[id] || [];
+      c.addEventListener('pointerenter', () => highlight(nodes, id, true));
+      c.addEventListener('pointerleave', () => highlight(nodes, id, false));
+    });
+  }
+
+  function copySummary(r) {
+    const typeName = { web: 'Web / HTTPS', file: 'File transfer', voice: 'Voice & video', admin: 'RDP / SSH' }[state.type];
+    const lines = [
+      `${r.title} (${typeName})`,
+      `Verdict: ${r.verdict[1]}`,
+      r.why,
+      '',
+      'Path:',
+      ...r.steps.map((s, i) => `${i + 1}. ${s.where || N[s.at].label}: ${s.text}`),
+      '',
+      'Features:',
+      ...r.feats.map((f) => `- ${FEAT[f.id][0]} [${f.at}]: ${f.note}${f.warn ? ' WARNING: ' + f.warn : ''}`),
+      ...(r.options.length ? ['', 'To allow it:', ...r.options.map((f) => `- ${FEAT[f.id][0]} [${f.at}]: ${f.note}`)] : [])
+    ];
+    const text = lines.join('\n');
+    const done = () => { const t = $('toast'); if (t) { t.hidden = false; setTimeout(() => { t.hidden = true; }, 1600); } };
+    try {
+      navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+    } catch (e) { fallbackCopy(text, done); }
+  }
+  function fallbackCopy(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { /* the text stays selected for a manual copy */ }
+    ta.remove();
+  }
+
+  function renderHint() {
+    const h = $('hint');
+    if (state.pending) h.innerHTML = `<i class="dot"></i><span>Source: <strong>${esc(N[state.pending].label)}</strong>. Now click the destination, or click it again to cancel.</span>`;
+    else h.innerHTML = '<i class="dot"></i><span>Drag between two boxes, or click a source and then a destination. PoPs, SPACE, Sockets, App Connectors and MPLS carry the traffic; they are not endpoints.</span>';
+  }
+
+  function syncSeg(id, value) {
+    $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === value)));
+  }
+
+  function update() {
+    const r = analyze(state.src, state.dst, state);
+    if (r) r.fm = featureMap(r);
+    $('pubRow').hidden = !(state.src === 'inet' && state.dst === 'dmz');
+    $('wanRow').hidden = !mplsPair(state.src, state.dst);
+    syncSeg('pub', state.pub);
+    syncSeg('wan', state.wan);
+    renderFlow(r);
+    renderPanels(r);
+    renderResults(r);
+    renderHint();
+    document.querySelectorAll('#presets .chip').forEach((c) => {
+      const p = PRESETS[+c.dataset.i], opt = p[3] || {};
+      const match = p[1] === state.src && p[2] === state.dst && Object.keys(opt).every((k) => state[k] === opt[k]);
+      c.setAttribute('aria-pressed', String(match));
+    });
+  }
+  function setFlow(s, d, opt) {
+    state.src = s; state.dst = d; state.pending = null;
+    if (opt) Object.assign(state, opt);
+    update();
+  }
+
+  // ---------- Interaction ----------
+  function svgPoint(evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const m = svg.getScreenCTM();
+    return m ? pt.matrixTransform(m.inverse()) : { x: 0, y: 0 };
+  }
+  function clickNode(k) {
+    if (!state.pending) { state.pending = k; update(); return; }
+    if (state.pending === k) { state.pending = null; update(); return; }
+    setFlow(state.pending, k);
+  }
+
+  let drag = null;
+  svg.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest('[data-pick]');
+    if (!g) {
+      if (state.pending) { state.pending = null; update(); }
+      return;
+    }
+    drag = { from: g.dataset.pick, x: e.clientX, y: e.clientY, moved: false };
+    e.preventDefault();
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.moved = true;
+    const p = svgPoint(e), a = N[drag.from];
+    layerRubber.replaceChildren();
+    el('line', { x1: a.x, y1: a.y, x2: p.x, y2: p.y, class: 't-rubber' }, layerRubber);
+  });
+  svg.addEventListener('pointerup', (e) => {
+    if (!drag) return;
+    const from = drag.from, moved = drag.moved;
+    drag = null;
+    layerRubber.replaceChildren();
+    if (!moved) { clickNode(from); return; }
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const g = hit && hit.closest ? hit.closest('[data-pick]') : null;
+    if (g && g.dataset.pick !== from) setFlow(from, g.dataset.pick);
+  });
+  window.addEventListener('pointerup', () => { if (drag) { drag = null; layerRubber.replaceChildren(); } });
+  svg.addEventListener('keydown', (e) => {
+    const g = e.target.closest && e.target.closest('[data-pick]');
+    if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); clickNode(g.dataset.pick); }
+    if (e.key === 'Escape' && state.pending) { state.pending = null; update(); }
+  });
+
+  function bindSeg(id, key) {
+    $(id).addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      state[key] = b.dataset.v;
+      update();
+    });
+  }
+  bindSeg('type', 'type');
+  bindSeg('pub', 'pub');
+  bindSeg('wan', 'wan');
+  $('type').addEventListener('click', () => syncSeg('type', state.type));
+  $('tls').addEventListener('change', (e) => { state.tls = e.target.checked; update(); });
+
+  const presetBox = $('presets');
+  PRESETS.forEach(([label, s, d, opt], i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.dataset.i = i;
+    b.addEventListener('click', () => setFlow(s, d, opt));
+    presetBox.appendChild(b);
+  });
+
+  drawStatic();
+  update();
+})();
+</script>
+
+</body>
+</html>
