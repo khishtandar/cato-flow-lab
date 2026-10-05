@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>try { const t = localStorage.getItem('cfl-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) { /* use the system theme */ }</script>
 <style>body{margin:0}[hidden]{display:none!important}
   .t-panel-drop { font: 600 12.5px var(--body); fill: var(--bad); }
   .feat.opt { border-style: dashed; background: var(--surface-2); }
@@ -154,6 +155,9 @@
     text-wrap: balance;
   }
   .lede { margin: 2px 0 0; color: var(--muted); max-width: 68ch; }
+  .top-side { display: flex; align-items: center; gap: 10px; }
+  .theme-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+  .theme-btn span[aria-hidden] { font-size: 15px; line-height: 1; }
   .disclaimer {
     font-size: 12.5px;
     color: var(--muted);
@@ -492,6 +496,7 @@
     .legend .m-only { display: inline-flex; }
     .d-only, .legend .d-only { display: none; }
     .disclaimer { max-width: none; }
+    .top-side { width: 100%; align-items: stretch; }
     .lede { font-size: 13.5px; }
     .controls { padding: 12px; gap: 12px; }
     .controls > * { min-width: 0; }
@@ -536,7 +541,10 @@
       <h1>Cato Flow Lab</h1>
       <p class="lede">Drag a line between two points on the network, or click one and then the other. The lab traces the path through the Cato Cloud, MPLS or the open internet, and shows which features act on it, where they run, and the Knowledge Base articles to read.</p>
     </div>
-    <p class="disclaimer">Unofficial study aid, not affiliated with Cato Networks. A simplified model: real behaviour depends on account settings and software version.</p>
+    <div class="top-side">
+      <button type="button" class="btn theme-btn" id="themeBtn" aria-label="Switch to dark theme"><span aria-hidden="true" id="themeIcon">&#9789;</span> <span id="themeText">Dark</span></button>
+      <p class="disclaimer">Unofficial study aid, not affiliated with Cato Networks. A simplified model: real behaviour depends on account settings and software version.</p>
+    </div>
   </header>
 
   <div class="main">
@@ -1806,6 +1814,25 @@
     if (!fit) showFlowOnPhone();
   });
   mobileMQ.addEventListener('change', renderHint);
+
+  // ---------- Theme ----------
+  // Starts from the system setting; the button switches light/dark and remembers the choice in this browser.
+  const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches ? 'dark' : 'light')) === 'dark';
+  function syncThemeBtn() {
+    const dark = isDark();
+    $('themeIcon').textContent = dark ? '\u2600' : '\u263D';
+    $('themeText').textContent = dark ? 'Light' : 'Dark';
+    $('themeBtn').setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  $('themeBtn').addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('cfl-theme', next); } catch (e) { /* the choice just isn't remembered */ }
+    syncThemeBtn();
+  });
+  darkMQ.addEventListener('change', syncThemeBtn);
+  syncThemeBtn();
 
   drawStatic();
   update();
