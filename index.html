@@ -264,6 +264,9 @@
   .t-flow-glow.blocked { stroke: var(--bad); }
   .t-arrow { fill: var(--accent); }
   .t-arrow.blocked { fill: var(--bad); }
+  /* Flows that go through the Cato Cloud and are inspected by SPACE: the orange flow inside a green secure tunnel */
+  .t-flow-glow.secure { stroke: var(--ok); stroke-width: 12; opacity: .5; }
+  .sw.fs { border-top: 3px dashed var(--accent); box-shadow: 0 -1.5px 0 3px color-mix(in srgb, var(--ok) 50%, transparent); }
   .t-rubber { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 6 5; fill: none; }
   .t-badge { pointer-events: none; }
   .t-badge circle { fill: var(--accent); }
@@ -408,7 +411,38 @@
   .t-mpls text { font: 600 13px var(--display); letter-spacing: 0.1em; fill: var(--c-pub); }
   .t-mpls.on rect, .t-mpls.hl rect { stroke: var(--accent); stroke-width: 3; }
   .sw.mp { border-top: 3px dotted var(--c-pub); }
-  .v-mpls { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .v-mpls, .v-offcloud { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+  .seg button:disabled { color: var(--muted); opacity: .55; cursor: not-allowed; }
+  .t-inet rect { fill: color-mix(in srgb, var(--muted) 9%, var(--surface)); stroke: var(--muted); stroke-width: 1.5; }
+  .t-inet text { font: 600 13px var(--display); letter-spacing: 0.1em; fill: var(--muted); }
+  .t-inet.on rect { stroke: var(--accent); stroke-width: 3; }
+  .t-link.offc { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 7 5; opacity: .75; }
+  .sw.oc { border-top: 3px dashed var(--muted); }
+
+  /* Transport chooser for site-to-site flows */
+  .chooser {
+    position: absolute; left: 50%; transform: translateX(-50%); z-index: 5;
+    width: min(440px, calc(100% - 24px)); display: grid; gap: 10px; padding: 14px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(20, 33, 42, 0.22);
+  }
+  .chooser-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .chooser-h b { font: 700 19px/1.2 var(--display); }
+  .chooser-x { flex: none; min-width: 32px; min-height: 32px; border: 0; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; border-radius: 8px; }
+  .chooser-x:hover { color: var(--ink); }
+  .chooser-sub { margin: 0; font-size: 13px; color: var(--muted); }
+  .chooser-opts { display: grid; gap: 8px; }
+  .opt {
+    display: grid; gap: 4px; text-align: left; cursor: pointer;
+    font: 400 13.5px/1.4 var(--body); color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--accent); }
+  .opt:disabled { opacity: .55; cursor: not-allowed; }
+  .opt b { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 600 14.5px var(--body); }
+  .opt .d { color: var(--muted); }
+  .opt.recommended { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+  .rec { font: 600 11.5px/1 var(--body); color: var(--ok); border: 1px solid currentColor; border-radius: 999px; padding: 3px 7px; background: color-mix(in srgb, var(--ok) 12%, transparent); }
 
   /* Cato core and SPACE */
   .t-link.core { stroke: var(--cloud); stroke-width: 5; opacity: .45; }
@@ -537,8 +571,9 @@
         <div class="row" id="wanRow" hidden>
           <span class="label">WAN path</span>
           <div class="seg" id="wan" role="group" aria-label="WAN transport">
-            <button type="button" data-v="cloud" aria-pressed="true">Cato Cloud (primary)</button>
-            <button type="button" data-v="altwan" aria-pressed="false">MPLS backup (Cato path down)</button>
+            <button type="button" data-v="cloud" aria-pressed="true">Cato Cloud</button>
+            <button type="button" data-v="offcloud" aria-pressed="false">Off-Cloud (internet)</button>
+            <button type="button" data-v="altwan" aria-pressed="false">Alt. WAN (MPLS backup)</button>
           </div>
         </div>
       </div>
@@ -548,7 +583,12 @@
         <button type="button" class="btn" id="mapFit" aria-pressed="false">Fit to screen</button>
       </div>
       <div class="canvas-scroll" id="canvas">
-        <svg class="topo" id="topo" viewBox="0 0 1180 830" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ and Branch B that backs up the Cato Cloud."></svg>
+        <svg class="topo" id="topo" viewBox="0 0 1180 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
+      </div>
+      <div class="chooser" id="chooser" role="dialog" aria-labelledby="chooserTitle" hidden>
+        <div class="chooser-h"><b id="chooserTitle"></b><button type="button" class="chooser-x" id="chooserX" aria-label="Close and keep Cato Cloud">&times;</button></div>
+        <p class="chooser-sub" id="chooserSub"></p>
+        <div class="chooser-opts" id="chooserOpts"></div>
       </div>
       <div class="legend">
         <span class="tag static cat-net">Connectivity</span>
@@ -562,7 +602,9 @@
         <span><i class="sw"></i> Link or tunnel</span>
         <span><i class="sw bb"></i> PoP to Cato core (SPACE)</span>
         <span><i class="sw mp"></i> MPLS (backup, Alternative WAN)</span>
-        <span><i class="sw fl"></i> Your traffic flow</span>
+        <span><i class="sw oc"></i> Off-Cloud (internet)</span>
+        <span><i class="sw fs"></i> Flow in a green secure tunnel: through Cato, inspected by SPACE</span>
+        <span><i class="sw fl"></i> Flow outside Cato (not inspected)</span>
         <span class="d-only">Panel on the right: features for the drawn flow (hover to locate, click for details)</span>
         <span class="m-only">Features panel: right side of the map. Tap a feature for its details.</span>
       </div>
@@ -634,6 +676,7 @@
     vsocket: ['vSocket in the cloud network', ['ranges', 'bgp'], 'net'],
     ipsec: ['IPsec site (IKEv2) with BGP', ['ikev2', 'bgpipsec', 'bfd'], 'net'],
     altwan: ['Alternative WAN (MPLS backup)', ['altwan', 's2s', 'offcloud'], 'net'],
+    offcloud: ['Off-Cloud (Socket to Socket over the internet)', ['offcloud', 's2s', 'prereq'], 'net'],
     bgpmpls: ['BGP with the MPLS router', ['bgpsock', 'bgp', 'bgpfilter'], 'net'],
     netrules: ['Network rules', ['netrules'], 'net'],
     tcpacc: ['TCP Acceleration', ['tcpacc', 'scanner'], 'net'],
@@ -669,7 +712,7 @@
   const PHASE_ORDER = ['1st packet', 'TLS', 'HTTP body', 'response', 'all phases'];
   const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
   // Evaluation order used when listing several features at one enforcement point.
-  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
+  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'offcloud', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
 
   // ---------- Topology ----------
   // Endpoints (pick: true) can be a flow's source or destination; devices, PoPs, SPACE and MPLS carry traffic.
@@ -691,27 +734,27 @@
     tyo:    { label: 'PoP', sub: 'Tokyo', type: 'pop', x: 478, y: 462 },
     chi:    { label: 'PoP', sub: 'Chicago', type: 'pop', x: 702, y: 462 },
     isp:    { label: 'ISP router', sub: 'public 2.2.2.2', type: 'isp', x: 215, y: 515 },
-    servers:{ label: 'Server VLAN', sub: '192.168.20.0/24', type: 'lan', site: 'hq', edge: 'sockDC', x: 90, y: 592, pick: true },
-    dmz:    { label: 'Web server', sub: '192.168.50.20 · DMZ', type: 'dmz', site: 'hq', edge: 'sockDC', x: 90, y: 688, pick: true },
-    sockDC: { label: 'Socket', sub: 'HQ / DC', type: 'socket', pop: 'tor', mpls: true, x: 225, y: 640 },
-    users:  { label: 'Users VLAN', sub: '10.10.10.0/24', type: 'lan', site: 'branchA', edge: 'sockA', x: 370, y: 592, pick: true },
-    guest:  { label: 'Guest Wi-Fi', sub: '10.10.99.0/24 · guest', type: 'guest', site: 'branchA', edge: 'sockA', x: 370, y: 688, pick: true },
-    sockA:  { label: 'Socket', sub: 'Branch A', type: 'socket', pop: 'tor', x: 500, y: 640 },
-    usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 715, y: 592, pick: true },
-    sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 625, y: 688 },
-    lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 915, y: 592, pick: true },
-    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 860, y: 688 },
+    servers:{ label: 'Server VLAN', sub: '192.168.20.0/24', type: 'lan', site: 'hq', edge: 'sockDC', x: 90, y: 652, pick: true },
+    dmz:    { label: 'Web server', sub: '192.168.50.20 · DMZ', type: 'dmz', site: 'hq', edge: 'sockDC', x: 90, y: 748, pick: true },
+    sockDC: { label: 'Socket', sub: 'HQ / DC', type: 'socket', pop: 'tor', mpls: true, x: 225, y: 700 },
+    users:  { label: 'Users VLAN', sub: '10.10.10.0/24', type: 'lan', site: 'branchA', edge: 'sockA', x: 370, y: 652, pick: true },
+    guest:  { label: 'Guest Wi-Fi', sub: '10.10.99.0/24 · guest', type: 'guest', site: 'branchA', edge: 'sockA', x: 370, y: 748, pick: true },
+    sockA:  { label: 'Socket', sub: 'Branch A', type: 'socket', pop: 'tor', mpls: true, x: 500, y: 700 },
+    usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 715, y: 652, pick: true },
+    sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 625, y: 748 },
+    lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 915, y: 652, pick: true },
+    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 860, y: 748 },
     remote: { label: 'Remote user', sub: 'Cato Client · laptop', type: 'remote', site: 'remote', pop: 'tor', x: 110, y: 470, pick: true },
-    mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 425, y: 790 }
+    mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 425, y: 850 }
   };
   const BOX = { end: [150, 50], dev: [100, 44], isp: [118, 44], mpls: [460, 36] };
-  const MPLS_Y = 790;
+  const MPLS_Y = 850;
   // The HQ ISP link: from the internet over the top and down the far left edge to the ISP router, never through Cato.
   const ISP_WAYPOINTS = [{ x: 5, y: 70 }, { x: 5, y: 515 }];
   // One features panel on the right of the Cato Cloud: CATO SPACE on top, AT THE EDGE below.
   const PANEL = { x: 898, y: 112, w: 272, h: 424 };
   const SHORT = {
-    transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', bgpmpls: 'BGP to MPLS router',
+    transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', offcloud: 'Off-Cloud tunnel', bgpmpls: 'BGP to MPLS router',
     netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', msa: 'MSA block rule',
     inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
     am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
@@ -727,7 +770,7 @@
     ['space', 'saas', 'egress', null, 0.62], ['saas', 'inet', null, 'dashed'],
     ['servers', 'sockDC'], ['dmz', 'sockDC'], ['sockDC', 'tor', 'DTLS', null, 0.5], ['sockDC', 'isp', null, 'dashed'],
     ['users', 'sockA'], ['guest', 'sockA'], ['sockA', 'tor', 'DTLS · UDP 443', null, 0.5],
-    ['usersB', 'sockB'], ['sockB', 'tyo', 'DTLS', null, 0.4],
+    ['usersB', 'sockB'], ['sockB', 'tyo', 'DTLS', null, 0.75],
     ['lanC', 'fwC'], ['fwC', 'chi', 'IPsec + BGP', null, 0.75],
     ['remote', 'tor', 'Client tunnel', 'dashed', 0.45],
     ['papp', 'appc'], ['appc', 'tor', 'outbound', 'dashed', 0.55],
@@ -743,10 +786,8 @@
     ['Remote user to private app', 'remote', 'papp'],
     ['Contractor to private app (browser)', 'contractor', 'papp'],
     ['Remote user to HQ servers', 'remote', 'servers'],
-    ['Tokyo to HQ on MPLS backup', 'usersB', 'servers', { wan: 'altwan' }],
-    ['Tokyo branch to HQ via Cato', 'usersB', 'servers', { wan: 'cloud' }],
-    ['Internet to server via LPF', 'inet', 'dmz', { pub: 'lpf' }],
-    ['Internet to server via RPF', 'inet', 'dmz', { pub: 'rpf' }],
+    ['Tokyo branch to HQ servers', 'usersB', 'servers'],
+    ['Internet user to DC web server', 'inet', 'dmz'],
     ['Cloud VPC to Tokyo branch', 'cloud', 'usersB'],
     ['IPsec branch to cloud VPC', 'lanC', 'cloud'],
     ['Guest Wi-Fi to Users VLAN', 'guest', 'users'],
@@ -769,9 +810,20 @@
   const popOf = (k) => (N[k].edge ? N[N[k].edge].pop : N[k].pop);
   const popName = (p) => `${N[p].label} ${N[p].sub}`;
   const mplsPair = (a, b) => !!(N[a].edge && N[b].edge && N[N[a].edge].mpls && N[N[b].edge].mpls && N[a].edge !== N[b].edge);
+  // Off-Cloud: Socket to Socket over the internet, drawn as a bar like the MPLS one, between the Cato Cloud and the sites.
+  // The HQ Socket is behind the ISP router, so its Off-Cloud tunnel goes through it.
+  const OFFBAR = { x0: 300, x1: 770, y: 561, h: 36 };
+  const OFF_Y = OFFBAR.y - 8;
+  const OFF_EXIT = { sockDC: ['isp', { x: OFFBAR.x0 + 12, y: OFF_Y }], sockA: [{ x: 500, y: OFF_Y }], sockB: [{ x: 560, y: 748 }, { x: 560, y: OFF_Y }] };
+  // Each Socket's dashed link to the Off-Cloud bar (HQ's starts at its ISP router)
+  const OFF_LINKS = { isp: [{ x: OFFBAR.x0 + 6, y: OFFBAR.y }], sockA: [{ x: 500, y: OFFBAR.y }], sockB: [{ x: 560, y: 748 }, { x: 560, y: OFFBAR.y }] };
+  const sockPair = (a, b) => !!(N[a].edge && N[b].edge && OFF_EXIT[N[a].edge] && OFF_EXIT[N[b].edge] && N[a].edge !== N[b].edge
+    && N[a].type !== 'guest' && N[b].type !== 'guest');
+  // The WAN path actually used: Alt. WAN only exists between the two MPLS sites.
+  const wanFor = (a, b, wan) => (wan === 'altwan' && !mplsPair(a, b) ? 'cloud' : wan);
 
   // ---------- Static drawing ----------
-  let layerFlow, layerRubber, layerBadges, layerPanels, spaceLine1, spaceLine2;
+  let layerFlow, layerRubber, layerBadges, layerPanels, spaceLine1, spaceLine2, inetEl;
   const nodeEls = {};
 
   function zone(x, y, w, h, label) {
@@ -785,13 +837,13 @@
     el('circle', { cx: 2, cy: 2, r: 1.2, class: 't-grid' }, pat);
     const mk = el('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: 7, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M0,0 L10,5 L0,10 z', class: 't-arrow' }, mk);
-    el('rect', { x: 0, y: 0, width: 1180, height: 830, fill: 'url(#dots)' }, svg);
+    el('rect', { x: 0, y: 0, width: 1180, height: 890, fill: 'url(#dots)' }, svg);
 
     // Zones along the bottom
-    zone(10, 545, 270, 210, 'HQ / Data center · Toronto');
-    zone(290, 545, 265, 210, 'Branch A · Toronto');
-    zone(565, 545, 230, 210, 'Branch B · Tokyo');
-    zone(805, 545, 195, 210, 'Branch C · Chicago');
+    zone(10, 605, 270, 210, 'HQ / Data center · Toronto');
+    zone(290, 605, 265, 210, 'Branch A · Toronto');
+    zone(565, 605, 230, 210, 'Branch B · Tokyo');
+    zone(805, 605, 195, 210, 'Branch C · Chicago');
     el('text', { x: 110, y: 434, 'text-anchor': 'middle', class: 't-zone-label' }, svg).textContent = 'On the road';
     zone(22, 255, 276, 105, 'Private apps · Toronto DC');
 
@@ -800,10 +852,9 @@
     el('text', { x: 652, y: 234, class: 't-cloud-label' }, svg).textContent = 'CATO CLOUD';
     el('text', { x: 590, y: 506, 'text-anchor': 'middle', class: 't-link-label' }, svg).textContent = 'SPACE runs in every PoP';
 
-    // MPLS (Alternative WAN) between HQ and Branch B
+    // MPLS (Alternative WAN) between HQ, Branch A and Branch B
     const m = N.mpls, [mw, mh] = BOX.mpls;
-    el('line', { x1: N.sockDC.x, y1: N.sockDC.y, x2: N.sockDC.x, y2: MPLS_Y, class: 't-link mpls' }, svg);
-    el('line', { x1: N.sockB.x, y1: N.sockB.y, x2: N.sockB.x, y2: MPLS_Y, class: 't-link mpls' }, svg);
+    for (const k in N) if (N[k].mpls) el('line', { x1: N[k].x, y1: N[k].y, x2: N[k].x, y2: MPLS_Y, class: 't-link mpls' }, svg);
     const mg = el('g', { class: 't-mpls', 'data-key': 'mpls' }, svg);
     el('rect', { x: m.x - mw / 2, y: m.y - mh / 2, width: mw, height: mh, rx: mh / 2 }, mg);
     el('text', { x: m.x, y: m.y + 13, 'text-anchor': 'middle' }, mg).textContent = 'MPLS · backup (Alternative WAN)';
@@ -824,6 +875,12 @@
         t.textContent = label;
       }
     }
+
+    // Off-Cloud bar, drawn over the links so its label stays readable: the Socket-to-PoP tunnels ride the internet too.
+    for (const k in OFF_LINKS) el('polyline', { points: [N[k], ...OFF_LINKS[k]].map((p) => `${p.x},${p.y}`).join(' '), class: 't-link offc' }, svg);
+    inetEl = el('g', { class: 't-inet' }, svg);
+    el('rect', { x: OFFBAR.x0, y: OFFBAR.y - OFFBAR.h / 2, width: OFFBAR.x1 - OFFBAR.x0, height: OFFBAR.h, rx: OFFBAR.h / 2 }, inetEl);
+    el('text', { x: 405, y: OFFBAR.y + 13, 'text-anchor': 'middle' }, inetEl).textContent = 'Off-Cloud (internet)';
 
     layerFlow = el('g', {}, svg);
 
@@ -1156,6 +1213,28 @@
       return r;
     }
 
+    // ----- Site to site Off-Cloud: Socket to Socket over the internet, no PoP
+    if (o.wan === 'offcloud' && sockPair(s, d)) {
+      const ea = S.edge, eb = D.edge, hq = ea === 'sockDC' || eb === 'sockDC';
+      r.verdict = ['offcloud', 'Off-Cloud, no PoP'];
+      r.why = 'The network rule sends this traffic Off-Cloud: the two Sockets build an encrypted tunnel straight to each other over their internet links, without going through a Cato PoP. It can save latency between nearby sites and keeps heavy flows such as backups off the Cato Cloud, but SPACE never sees the traffic, so the WAN Firewall, IPS and anti-malware do not inspect it.';
+      r.path = [s, ea, ...OFF_EXIT[ea], ...OFF_EXIT[eb].slice().reverse(), eb, d];
+      r.steps.push(firstStep(s));
+      r.steps.push({ at: ea, where: 'Socket', text: `The network rule for this traffic uses the Off-Cloud transport. The ${N[ea].sub} Socket encrypts the packet into its Off-Cloud tunnel to the ${N[eb].sub} Socket and sends it out of its internet link.` });
+      if (ea === 'sockDC') r.steps.push({ at: 'isp', where: 'ISP router', text: 'The packet leaves through the HQ ISP router, NATed to 2.2.2.2, and crosses the internet to the other Socket. No PoP is involved.' });
+      if (eb === 'sockDC') r.steps.push({ at: 'isp', where: 'ISP router', text: 'The packet arrives at the HQ public IP 2.2.2.2. The HQ Socket is behind NAT, so the ISP router forwards the Off-Cloud port to the Socket WAN IP 10.1.1.1.' });
+      r.steps.push({ at: eb, where: 'Socket', text: `The ${N[eb].sub} Socket decrypts the tunnel and delivers the packet. If the Off-Cloud link goes down, the rule's secondary transport (for example the Cato Cloud) takes over.` });
+      r.steps.push(finalStep(d));
+      F('offcloud', 'Socket', 'Enable Off-Cloud on the internet link of each Socket and set the public IP and port the other Sockets use to reach it. Then choose Off-Cloud as the transport in a network rule for the traffic that should go direct, with the Cato Cloud as the secondary. The tunnel between the Sockets is encrypted.', 'Off-Cloud traffic skips SPACE: no WAN Firewall, IPS or anti-malware. Use it only between trusted sites.');
+      if (hq) F('doublenat', 'ISP router', 'The HQ Socket is behind the ISP router (double NAT). Other Sockets must be able to reach it, so forward the Off-Cloud port on 2.2.2.2 to the Socket WAN IP 10.1.1.1, or put the modem in bridge mode. A Socket with its own public IP needs no forward.');
+      F('netrules', 'Socket', 'Primary transport Off-Cloud, secondary Cato Cloud: if the direct tunnel fails, the traffic goes back through the PoP and SPACE inspects it again.');
+      if (o.type === 'voice') F('qos', 'Socket', 'Bandwidth priority still applies on the Socket. Over the open internet there is no Cato backbone, so latency and loss depend on the two ISPs.');
+      if (tcp) F('tcpacc', 'Socket', 'Does not apply: no PoP proxies the TCP session on the Off-Cloud path.');
+      F('lanfw', 'Socket', 'If this traffic needs filtering, it has to happen on the Sockets (LAN Firewall), because no PoP sees it. Confirm with your Cato SE how the LAN Firewall applies to Off-Cloud traffic.');
+      F('capture', 'Socket', 'Capture the LAN and WAN interfaces on both Sockets to confirm the traffic takes the Off-Cloud tunnel and not the PoP.');
+      return r;
+    }
+
     // ----- Site to site over MPLS (Alternative WAN)
     if (o.wan === 'altwan' && mplsPair(s, d)) {
       const ea = S.edge, eb = D.edge;
@@ -1182,7 +1261,8 @@
     const sPop = popOf(s), dPop = popOf(d);
     r.verdict = ['rule', 'Needs a WAN Firewall allow rule'];
     r.why = 'Between your own sites, users and clouds, the WAN Firewall ends with an implicit block. Nothing passes until you add an allow rule for this flow.';
-    if (mplsPair(s, d)) r.why += ' These two sites also have MPLS as a backup: switch the WAN path to MPLS backup to see the failover path.';
+    if (mplsPair(s, d)) r.why += ' Switch the WAN path to compare: Off-Cloud goes Socket to Socket over the internet, and Alt. WAN uses the MPLS backup.';
+    else if (sockPair(s, d)) r.why += ' Switch the WAN path to Off-Cloud to send it Socket to Socket over the internet instead. (No MPLS between these sites.)';
     r.steps.push(firstStep(s));
     const e1 = edgeStep(s, true);
     if (e1) r.steps.push(e1);
@@ -1222,7 +1302,7 @@
     const vs = keys.filter((k) => /^vs/.test(k));
     const nodesFor = (f) => {
       // On the MPLS path, Socket features run on both Sockets.
-      if (r.verdict && r.verdict[0] === 'mpls' && /^Socket/.test(f.at)) return socks;
+      if (r.verdict && ['mpls', 'offcloud'].includes(r.verdict[0]) && /^Socket/.test(f.at)) return socks;
       return ({
         'Socket': [sock], 'PoP': [pop], 'SPACE': ['space'], 'Cato core': ['space'], 'Socket + PoP': [edge, pop],
         'Cato Client': ['remote'], 'vSocket': vs.length ? vs : [], 'IPsec FW': [ipsecDev], 'ISP router': ['isp'], 'MPLS': ['mpls'], 'App Connector': ['appc']
@@ -1259,6 +1339,7 @@
     layerFlow.replaceChildren();
     layerBadges.replaceChildren();
     for (const k in nodeEls) nodeEls[k].classList.remove('src', 'dst', 'on', 'pending', 'hl', 'dropped');
+    inetEl.classList.remove('on');
     spaceLine1.textContent = 'single pass';
     spaceLine1.classList.remove('drop');
     spaceLine2.textContent = 'cloud engine';
@@ -1270,6 +1351,7 @@
     const pts = pathPoints(r.path);
     pts.forEach((p) => { if (p.key && ['pop', 'space'].includes(N[p.key].type)) nodeEls[p.key].classList.add('on'); });
     if (r.verdict[0] === 'mpls') nodeEls.mpls.classList.add('on');
+    if (r.verdict[0] === 'offcloud') inetEl.classList.add('on');
     if (pts.length > 1) {
       // Build the path. When traffic enters SPACE from a PoP and comes back out to the same PoP, the two legs
       // are drawn as curves bending to opposite sides so the round trip is visible.
@@ -1287,8 +1369,11 @@
         segs.push({ a, b, c });
       }
       const d = `M${pts[0].x},${pts[0].y} ` + segs.map((sg) => (sg.c ? `Q${sg.c.x},${sg.c.y} ${sg.b.x},${sg.b.y}` : `L${sg.b.x},${sg.b.y}`)).join(' ');
-      el('path', { d, class: 't-flow-glow' + (r.blocked ? ' blocked' : '') }, layerFlow);
-      const fl = el('path', { d, class: 't-flow' + (r.blocked ? ' blocked' : '') }, layerFlow);
+      // Through the Cato Cloud and inspected by SPACE: a green secure casing around the orange flow. Bypassing Cato: orange only.
+      const tone = r.blocked ? ' blocked' : '';
+      const secure = !r.blocked && r.path.includes('space');
+      el('path', { d, class: 't-flow-glow' + tone + (secure ? ' secure' : '') }, layerFlow);
+      const fl = el('path', { d, class: 't-flow' + tone }, layerFlow);
       if (!r.blocked) fl.setAttribute('marker-end', 'url(#arrow)');
       // A small arrow halfway along each leg shows the direction of travel.
       for (const sg of segs) {
@@ -1297,7 +1382,7 @@
         const px = c ? 0.25 * a.x + 0.5 * c.x + 0.25 * b.x : (a.x + b.x) / 2;
         const py = c ? 0.25 * a.y + 0.5 * c.y + 0.25 * b.y : (a.y + b.y) / 2;
         const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
-        el('path', { d: 'M-6,-5 L6,0 L-6,5 z', transform: `translate(${px},${py}) rotate(${ang})`, class: 't-dir' + (r.blocked ? ' blocked' : '') }, layerFlow);
+        el('path', { d: 'M-6,-5 L6,0 L-6,5 z', transform: `translate(${px},${py}) rotate(${ang})`, class: 't-dir' + tone }, layerFlow);
       }
       if (r.blocked) {
         const last = pts[pts.length - 1];
@@ -1414,6 +1499,7 @@
       y += 36;
     } else if (!inSpace.length) {
       const why = r.verdict[0] === 'mpls' ? ['On MPLS backup, Socket to Socket:', 'SPACE never sees this flow.']
+        : r.verdict[0] === 'offcloud' ? ['Off-Cloud, Socket to Socket:', 'SPACE never sees this flow.']
         : r.verdict[0] === 'local' ? ['Stays on one Socket:', 'SPACE never sees this flow.']
         : (r.verdict[0] === 'publish' && state.pub === 'lpf') ? ['LPF goes ISP router to Socket:', 'SPACE never sees this flow.']
         : ['No SPACE feature acts on', 'this flow.'];
@@ -1535,14 +1621,18 @@
   }
 
   function update() {
-    const r = analyze(state.src, state.dst, state);
+    const wan = wanFor(state.src, state.dst, state.wan);
+    const r = analyze(state.src, state.dst, Object.assign({}, state, { wan }));
     if (r) r.fm = featureMap(r);
     $('pubRow').hidden = !(state.src === 'inet' && state.dst === 'dmz');
-    $('wanRow').hidden = !mplsPair(state.src, state.dst);
+    $('wanRow').hidden = !sockPair(state.src, state.dst);
+    const alt = $('wan').querySelector('[data-v="altwan"]');
+    alt.disabled = !mplsPair(state.src, state.dst);
+    alt.title = alt.disabled ? 'No MPLS between these sites. In this lab only HQ and Branch B (Tokyo) have MPLS.' : '';
     $('mFrom').value = state.src;
     $('mTo').value = state.dst;
     syncSeg('pub', state.pub);
-    syncSeg('wan', state.wan);
+    syncSeg('wan', wan);
     renderFlow(r);
     renderPanels(r);
     renderResults(r);
@@ -1554,11 +1644,60 @@
     });
   }
   function setFlow(s, d, opt) {
+    hideChooser();
     state.src = s; state.dst = d; state.pending = null;
     if (opt) Object.assign(state, opt);
     update();
     showFlowOnPhone();
   }
+  // A flow the user draws or picks. Between two Socket sites, ask which transport to use; Cato Cloud is
+  // recommended, and stays selected if the chooser is closed.
+  function userFlow(s, d) {
+    if (s === 'inet' && d === 'dmz') { setFlow(s, d, { pub: 'rpf' }); askPub(); return; }
+    if (!sockPair(s, d)) { setFlow(s, d); return; }
+    setFlow(s, d, { wan: 'cloud' });
+    askWan(s, d);
+  }
+
+  // ---------- Chooser ----------
+  // Asks how a flow should travel. The first option is recommended and stays selected if the chooser is closed.
+  const chooser = $('chooser');
+  // [value, name, description, disabled reason]
+  function openChooser(title, sub, opts, key) {
+    $('chooserTitle').textContent = title;
+    $('chooserSub').textContent = sub;
+    const box = $('chooserOpts');
+    box.replaceChildren();
+    opts.forEach(([v, name, desc, off], i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt' + (i === 0 ? ' recommended' : '');
+      b.disabled = !!off;
+      b.innerHTML = `<b>${esc(name)}${i === 0 ? '<span class="rec">Recommended</span>' : ''}</b><span class="d">${esc(off || desc)}</span>`;
+      b.addEventListener('click', () => { hideChooser(); state[key] = v; update(); });
+      box.appendChild(b);
+    });
+    chooser.style.top = (canvas.offsetTop + 12) + 'px';
+    chooser.hidden = false;
+    box.querySelector('.opt').focus({ preventScroll: true });
+  }
+  function askWan(s, d) {
+    const site = (k) => N[N[k].edge].sub;
+    openChooser(`Connect ${site(s)} to ${site(d)}`, 'How should this site-to-site traffic travel? You can change it later under WAN path.', [
+      ['cloud', 'Cato Cloud', 'Through the nearest PoPs and the Cato backbone. SPACE inspects it: WAN Firewall, IPS and anti-malware.'],
+      ['offcloud', 'Off-Cloud (internet)', 'Socket to Socket straight over the internet. No PoP, so SPACE does not inspect it.'],
+      ['altwan', 'Alt. WAN (MPLS backup)', 'Socket to Socket over MPLS, the backup when the Cato path is down. No PoP, so SPACE does not inspect it.', mplsPair(s, d) ? '' : 'No MPLS between these sites.']
+    ], 'wan');
+  }
+  function askPub() {
+    openChooser('Publish the web server', 'How should the internet reach 192.168.50.20:443? You can change it later under Publish via.', [
+      ['rpf', 'RPF (Cato IP)', 'Published on a Cato allocated public IP. SPACE inspects the inbound traffic with IPS, and it keeps working if one HQ link fails.'],
+      ['lpf', 'LPF (HQ ISP IP, direct)', "Published on the HQ ISP address 2.2.2.2 through the ISP router. It never reaches a PoP, so Cato does not inspect it."]
+    ], 'pub');
+  }
+  function hideChooser() { chooser.hidden = true; }
+  $('chooserX').addEventListener('click', hideChooser);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !chooser.hidden) hideChooser(); });
 
   // ---------- Phones ----------
   // Below 760px the map is wider than the screen: it scrolls sideways, and each new flow is scrolled into view.
@@ -1588,7 +1727,7 @@
   function clickNode(k) {
     if (!state.pending) { state.pending = k; update(); return; }
     if (state.pending === k) { state.pending = null; update(); return; }
-    setFlow(state.pending, k);
+    userFlow(state.pending, k);
   }
 
   let drag = null;
@@ -1617,7 +1756,7 @@
     if (!moved) { clickNode(from); return; }
     const hit = document.elementFromPoint(e.clientX, e.clientY);
     const g = hit && hit.closest ? hit.closest('[data-pick]') : null;
-    if (g && g.dataset.pick !== from) setFlow(from, g.dataset.pick);
+    if (g && g.dataset.pick !== from) userFlow(from, g.dataset.pick);
   });
   window.addEventListener('pointerup', () => { if (drag) { drag = null; layerRubber.replaceChildren(); } });
   svg.addEventListener('pointercancel', () => { drag = null; layerRubber.replaceChildren(); });
@@ -1646,7 +1785,8 @@
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'chip'; b.textContent = label;
     b.dataset.i = i;
-    b.addEventListener('click', () => setFlow(s, d, opt));
+    // Presets without fixed options ask the same questions as a drawn flow (for example RPF or LPF).
+    b.addEventListener('click', () => (opt ? setFlow(s, d, opt) : userFlow(s, d)));
     presetBox.appendChild(b);
   });
 
@@ -1655,8 +1795,8 @@
     for (const k in N) if (N[k].pick) sel.add(new Option(PICK_NAMES[k] || N[k].label, k));
   }
   // Choosing the end that is already on the other side swaps the two.
-  $('mFrom').addEventListener('change', (e) => { const v = e.target.value; setFlow(v, v === state.dst ? state.src : state.dst); });
-  $('mTo').addEventListener('change', (e) => { const v = e.target.value; setFlow(v === state.src ? state.dst : state.src, v); });
+  $('mFrom').addEventListener('change', (e) => { const v = e.target.value; userFlow(v, v === state.dst ? state.src : state.dst); });
+  $('mTo').addEventListener('change', (e) => { const v = e.target.value; userFlow(v === state.src ? state.dst : state.src, v); });
   $('mSwap').addEventListener('click', () => setFlow(state.dst, state.src));
   $('mapFit').addEventListener('click', (e) => {
     const fit = canvas.classList.toggle('fit');
