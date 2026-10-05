@@ -649,6 +649,9 @@
     bgpsock: ['Configuring BGP neighbors for a Cato Socket', 'https://support.catonetworks.com/hc/en-us/articles/4413273474065-Configuring-BGP-Neighbors-for-a-Cato-Socket'],
     bgpfilter: ['Working with BGP filtering', 'https://support.catonetworks.com/hc/en-us/articles/23972529384733-Working-with-BGP-Filtering'],
     bgpipsec: ['BGP neighbors for an IPsec connection', 'https://support.catonetworks.com/hc/en-us/articles/4413280509457-Configuring-BGP-Neighbors-for-an-IPsec-Connection'],
+    ipsecrec: ['Recovery mechanisms for Cato site types', 'https://knowledge.catonetworks.com/docs/en/recovery-mechanisms-for-cato-site-types'],
+    ipsecvs: ['Cato Socket vs IPsec sites and tunnels', 'https://knowledge.catonetworks.com/docs/en/cato-socket-vs-ipsec-sites-and-tunnels'],
+    ipsectrbl: ['Troubleshooting IPsec connectivity', 'https://support.catonetworks.com/hc/en-us/articles/11013259398301-Troubleshooting-IPsec-Connectivity'],
     bfd: ['Configuring BFD for BGP neighbors', 'https://knowledge.catonetworks.com/docs/en/configuring-bfd-for-bgp-neighbors'],
     ikev2: ['Configuring IPsec IKEv2 Sites', 'https://support.catonetworks.com/hc/en-us/articles/4413265635473-Configuring-IPsec-IKEv2-Sites'],
     rpf: ['Configuring Remote Port Forwarding', 'https://support.catonetworks.com/hc/en-us/articles/7784979714333-Configuring-Remote-Port-Forwarding-for-the-Account'],
@@ -682,7 +685,9 @@
     transport: ['Socket tunnel (DTLS)', ['prereq', 'altport', 'ilmm'], 'net'],
     clienttunnel: ['Cato Client tunnel', ['clientfb'], 'net'],
     vsocket: ['vSocket in the cloud network', ['ranges', 'bgp'], 'net'],
-    ipsec: ['IPsec site (IKEv2) with BGP', ['ikev2', 'bgpipsec', 'bfd'], 'net'],
+    ipsec: ['IPsec site (IKEv2) with BGP', ['ikev2', 'bgpipsec', 'ipsecvs'], 'net'],
+    ipsecha: ['IPsec tunnel failover (primary / secondary)', ['ipsecrec', 'bfd', 'bgpipsec'], 'net'],
+    ipseccap: ['Troubleshooting: IPsec tunnel capture', ['ipsectrbl'], 'ops'],
     altwan: ['Alternative WAN (MPLS backup)', ['altwan', 's2s', 'offcloud'], 'net'],
     offcloud: ['Off-Cloud (Socket to Socket over the internet)', ['offcloud', 's2s', 'prereq'], 'net'],
     bgpmpls: ['BGP with the MPLS router', ['bgpsock', 'bgp', 'bgpfilter'], 'net'],
@@ -720,7 +725,7 @@
   const PHASE_ORDER = ['1st packet', 'TLS', 'HTTP body', 'response', 'all phases'];
   const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
   // Evaluation order used when listing several features at one enforcement point.
-  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'offcloud', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
+  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'offcloud', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'ipsecha', 'capture', 'ipseccap'];
 
   // ---------- Topology ----------
   // Endpoints (pick: true) can be a flow's source or destination; devices, PoPs, SPACE and MPLS carry traffic.
@@ -767,7 +772,7 @@
     inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
     am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
     rpf: 'Remote Port Forwarding', lpf: 'Local Port Forwarding', doublenat: 'ISP port forward',
-    internetonly: 'Internet Only range', capture: 'Traffic capture', resilience: 'Link & PoP failover',
+    internetonly: 'Internet Only range', capture: 'Traffic capture', resilience: 'Link & PoP failover', ipsecha: 'IPsec tunnel failover', ipseccap: 'IPsec tunnel capture',
     rbi: 'Remote Browser Isolation', privaccess: 'Private Access policy', appconn: 'App Connector', portal: 'Browser Access portal'
   };
 
@@ -959,13 +964,17 @@
     const tcp = o.type !== 'voice';
     const webish = o.type === 'web' || o.type === 'file';
     const hasSocket = (k) => ['lan', 'guest', 'dmz', 'cloud'].includes(N[k].type);
+    // An IPsec site (third-party firewall, no Socket) at either end of the flow
+    const ipsec = S.type === 'ipsecsite' || D.type === 'ipsecsite';
+    const ipsecFailover = () => F('ipsecha', 'IPsec FW', 'The firewall builds a primary and a secondary tunnel to two different PoPs (active/passive). BGP moves traffic to the secondary tunnel when the primary fails; add BFD to cut failover from up to about 60 seconds to about 5. The 99.999% SLA needs tunnels to two PoPs.', 'Internet Recovery and WAN Recovery are not supported for IPsec sites.');
+    const ipsecCapture = () => F('ipseccap', 'IPsec FW', "The site's IPsec page in the Cato Management Application has a packet capture taken at the PoP, but it shows only the tunnel's control traffic (IKE), not user data. Capture LAN traffic on the firewall itself.");
     const siteName = (k) => (N[k].edge ? N[N[k].edge].sub : N[k].label);
 
     function transport(k) {
       const t = N[k].type;
       if (t === 'remote') F('clienttunnel', 'Cato Client', 'Encrypted DTLS tunnel from the laptop to the nearest PoP. Falls back to a TCP 443 tunnel when UDP is blocked (hotels, guest Wi-Fi).');
       else if (t === 'cloud') F('vsocket', 'vSocket', 'A virtual Socket inside the VPC or VNet. The design is the same in AWS, Azure and GCP: deploy the vSocket from the marketplace image and point the route table at it for the ranges that should go through Cato.');
-      else if (t === 'ipsecsite') F('ipsec', 'IPsec FW', 'A site with a third-party firewall instead of a Socket connects with standard IPsec (IKEv2 recommended). Run BGP over the tunnel and add BFD for fast failover. Security still runs in the PoP.');
+      else if (t === 'ipsecsite') F('ipsec', 'IPsec FW', 'A site with a third-party firewall instead of a Socket connects with standard IPsec (IKEv2 recommended). The tunnel is pinned to one PoP; run BGP over it. All security still runs in the PoP: Internet and WAN Firewall, IPS, anti-malware, DLP.', 'Socket-only features are not available on the IPsec side: TCP Acceleration, packet loss mitigation, upstream QoS and packet loss monitoring.');
       else F('transport', 'Socket', 'Outbound DTLS on UDP 443, falling back to UDP 1337. Needs UDP 53, UDP 443 and TCP 443 out. Works behind NAT, but give multi-link Sockets public IPs. ILMM watches the ISP link for you.');
     }
     function firstStep(k) {
@@ -995,6 +1004,11 @@
       return { at: k, where: n.label, text: `Delivered to ${n.label} (${n.sub}).` };
     }
     function addCommon() {
+      if (ipsec) {
+        F('netrules', 'Socket + PoP', 'Network rules still apply in the PoP, for example bandwidth priority. On the IPsec side the firewall, not Cato, chooses the tunnel and PoP. Bypass rules skip every Cato security engine, so keep them rare.');
+        if (o.type === 'voice') F('qos', 'Socket + PoP', 'For the IPsec site, bandwidth priority is applied only to traffic from the Cato Cloud to the site (downstream); upstream is best effort.', 'Packet loss mitigation is a Socket feature: it does not protect voice on the IPsec tunnel.');
+        return;
+      }
       F('netrules', 'Socket + PoP', 'Pick the transport, link, PoP and priority for this traffic. Bypass or local-breakout rules send traffic straight out and skip every Cato security engine, so keep them rare and documented.');
       if (o.type === 'voice') F('qos', 'Socket + PoP', 'Give voice and video high priority. Packet loss mitigation duplicates packets on lossy links. UDP is not TCP-accelerated.');
       if (tcp) F('tcpacc', 'SPACE', 'SPACE splits the TCP session at the PoP to speed up long-distance and lossy paths. Turn it off with a narrow rule for vulnerability scanners and TCP health checks: the proxy can make closed ports look open.');
@@ -1181,7 +1195,7 @@
       }
       F('egress', 'SPACE', "Traffic leaves with a Cato public IP. Allocate dedicated IPs when partners or SaaS allow-list your address. Your own public IP range can't be announced from Cato.");
       if (hasSocket(s)) F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see where packets stop.');
-      F('resilience', 'Socket + PoP', 'If a link or PoP fails, the Socket moves its tunnels to another link or the next PoP automatically.');
+      if (ipsec) { ipsecCapture(); ipsecFailover(); } else F('resilience', 'Socket + PoP', 'If a link or PoP fails, the Socket moves its tunnels to another link or the next PoP automatically.');
       return r;
     }
 
@@ -1294,8 +1308,14 @@
     addCommon();
     F('ips', 'SPACE', 'IPS also inspects east-west traffic between sites, users and clouds once the WAN Firewall allows it.');
     if (o.type === 'file') F('am', 'SPACE', 'Anti-malware scans files moving between sites (WAN traffic) as well as internet downloads, up to 100 MB per file.');
-    if (hasSocket(s) || hasSocket(d)) F('capture', 'Socket', 'Capture the LAN and the SD-WAN tunnel together on each Socket. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the far end.');
-    F('resilience', 'Socket + PoP', 'Sockets move to another link or PoP on failure; the backbone reroutes between PoPs.');
+    if (hasSocket(s) || hasSocket(d)) F('capture', 'Socket', ipsec
+      ? 'On the Socket end, capture the LAN and the SD-WAN tunnel together in the Socket WebUI. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the IPsec site.'
+      : 'Capture the LAN and the SD-WAN tunnel together on each Socket. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the far end.');
+    if (ipsec) {
+      ipsecCapture();
+      ipsecFailover();
+      if (hasSocket(s) || hasSocket(d)) F('resilience', 'Socket + PoP', 'The Socket end moves to another link or PoP on failure; the backbone reroutes between PoPs.');
+    } else F('resilience', 'Socket + PoP', 'Sockets move to another link or PoP on failure; the backbone reroutes between PoPs.');
     return r;
   }
 
