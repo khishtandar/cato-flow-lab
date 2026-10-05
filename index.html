@@ -585,7 +585,7 @@
             <button type="button" data-v="voice" aria-pressed="false">Voice &amp; video</button>
             <button type="button" data-v="admin" aria-pressed="false">RDP / SSH</button>
           </div>
-          <label class="toggle" for="tls" id="tlsLabel"><input type="checkbox" id="tls" checked> TLS inspection on</label>
+          <label class="toggle" for="tls" id="tlsLabel"><input type="checkbox" id="tls" checked> TLSi on</label>
           <label class="toggle" for="showNA"><input type="checkbox" id="showNA"> Show features not applied</label>
         </div>
         <div class="row" id="pubRow" hidden>
@@ -719,7 +719,7 @@
     inetfw: ['Internet Firewall', ['inetfw', 'fwrec', 'packetflow'], 'fw'],
     wanfw: ['WAN Firewall', ['fwrec', 'packetflow'], 'fw'],
     lanfw: ['Socket LAN Firewall', ['lanfw'], 'fw'],
-    tls: ['TLS inspection', ['dlptr', 'secsvc', 'packetflow'], 'threat'],
+    tls: ['TLSi (TLS Inspection: decrypt and scan HTTPS)', ['dlptr', 'secsvc', 'packetflow'], 'threat'],
     ips: ['IPS', ['ips', 'dnsprot', 'phish'], 'threat'],
     am: ['Anti-Malware, NG Anti-Malware and Sandbox', ['am', 'sandbox'], 'threat'],
     dlp: ['CASB and DLP', ['dlp', 'dlptr'], 'data'],
@@ -790,7 +790,7 @@
   const SHORT = {
     transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', offcloud: 'Off-Cloud tunnel', bgpmpls: 'BGP to MPLS router',
     netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', plm: 'Packet loss mitigation', msa: 'MSA block rule',
-    inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
+    inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLSi', ips: 'IPS',
     am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
     rpf: 'Remote Port Forwarding', lpf: 'Local Port Forwarding', doublenat: 'ISP port forward',
     internetonly: 'Internet Only range', capture: 'Traffic capture', resilience: 'Link & PoP failover', ipsecha: 'IPsec tunnel failover', ipseccap: 'IPsec tunnel capture',
@@ -1132,7 +1132,7 @@
           r.steps.push({ at: 'sockDC', where: 'Socket', text: 'The HQ Socket delivers it to 192.168.50.20:443.' });
           r.steps.push({ at: d, where: 'Web server', text: 'The server replies and the reply returns the same way, so there is no asymmetric routing.' });
           F('rpf', 'SPACE', 'Publishes the server on a Cato allocated IP that stays up even if one HQ link fails. Avoid Any as the source; allow-list known IPs. For a public site, put a third-party DDoS/WAF service in front and allow only its ranges.');
-          F('ips', 'SPACE', 'IPS inspects inbound RPF traffic with reputation and signatures. TLS inspection is not done on inbound traffic, so the server must handle its own HTTPS security.');
+          F('ips', 'SPACE', 'IPS inspects inbound RPF traffic with reputation and signatures. TLSi is not done on inbound traffic, so the server must handle its own HTTPS security.');
           transport('dmz');
           F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see whether the request arrives and the reply leaves.');
         } else {
@@ -1195,7 +1195,7 @@
       r.steps.push({ at: pop, where: popName(pop), text: `${popName(pop)} terminates the tunnel and hands the traffic to SPACE in the Cato core.` });
       r.steps.push({ at: 'space', where: 'Cato SPACE', text: D.risky
         ? 'SPACE matches the Internet Firewall rule with the Remote Browsing action. The page runs in an isolated browser in the Cato Cloud, and only a safe visual stream is sent back to the user.'
-        : 'SPACE inspects it in a single pass. Its engines run in parallel and act as the data becomes available: the hidden MSA rule, Internet Firewall and IPS from the first packet, TLS inspection at the handshake, CASB and DLP on the request body, anti-malware on the response.' });
+        : 'SPACE inspects it in a single pass. Its engines run in parallel and act as the data becomes available: the hidden MSA rule, Internet Firewall and IPS from the first packet, TLSi at the handshake, CASB and DLP on the request body, anti-malware on the response.' });
       r.steps.push({ at: d, where: 'Internet', text: "The packet leaves Cato NATed to a Cato public IP (shared, or your allocated IP), not to the site's ISP address." });
       if (S.type === 'guest') r.why += ' The Guest Wi-Fi range is marked Internet Only, so it gets internet access but no route to other sites.';
       if (S.type === 'dmz') r.why += ' Outbound traffic from the web server also leaves with a Cato IP, not with 2.2.2.2.';
@@ -1213,12 +1213,12 @@
       if (webish) {
         F('tls', 'SPACE', o.tls
           ? "The PoP decrypts HTTPS so IPS, anti-malware and DLP can see inside. Block QUIC (UDP 443) for users, or browsers will use HTTP/3, which can't be inspected."
-          : 'Off: HTTPS stays encrypted, so the engines below only see names and metadata.', o.tls ? null : 'Turn TLS inspection on for this traffic, or DLP and anti-malware will miss most of it.');
+          : 'Off: HTTPS stays encrypted, so the engines below only see names and metadata.', o.tls ? null : 'Turn TLSi on for this traffic, or DLP and anti-malware will miss most of it.');
       }
       F('ips', 'SPACE', 'Signatures, reputation and DNS protections. Newly Registered Domains can block domains younger than 7, 14, 21, 30 or 60 days; its default action is monitor only.');
       if (webish) {
-        F('am', 'SPACE', 'Two layers: a signature engine and SentinelOne NG Anti-Malware, plus the Sandbox for unknown files. Files up to 100 MB are scanned.', o.tls ? null : 'Without TLS inspection, files downloaded over HTTPS are not scanned.');
-        F('dlp', 'SPACE', 'Inline DLP scans files up to 50 MB. Audio, video and binary files are skipped; password-protected files are detected but not opened. CASB controls actions inside SaaS apps (upload, share, login).', o.tls ? null : 'DLP needs TLS inspection to see uploads to HTTPS sites.');
+        F('am', 'SPACE', 'Two layers: a signature engine and SentinelOne NG Anti-Malware, plus the Sandbox for unknown files. Files up to 100 MB are scanned.', o.tls ? null : 'Without TLSi, files downloaded over HTTPS are not scanned.');
+        F('dlp', 'SPACE', 'Inline DLP scans files up to 50 MB. Audio, video and binary files are skipped; password-protected files are detected but not opened. CASB controls actions inside SaaS apps (upload, share, login).', o.tls ? null : 'DLP needs TLSi to see uploads to HTTPS sites.');
       }
       F('egress', 'SPACE', "Traffic leaves with a Cato public IP. Allocate dedicated IPs when partners or SaaS allow-list your address. Your own public IP range can't be announced from Cato.");
       if (hasSocket(s)) F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see where packets stop.');
@@ -1336,8 +1336,8 @@
     F('ips', 'SPACE', 'IPS also inspects east-west traffic between sites, users and clouds once the WAN Firewall allows it.');
     if (webish) {
       F('tls', 'SPACE', o.tls
-        ? 'TLS inspection also covers WAN HTTPS (between sites and users) when your TLS Inspection policy inspects it, so IPS, anti-malware and DLP can see inside.'
-        : 'Off: WAN HTTPS stays encrypted, so the engines only see names and metadata.', o.tls ? null : 'Turn TLS inspection on for this traffic, or anti-malware and DLP will miss most of it.');
+        ? 'TLSi also covers WAN HTTPS (between sites and users) when your TLS Inspection policy inspects it, so IPS, anti-malware and DLP can see inside.'
+        : 'Off: WAN HTTPS stays encrypted, so the engines only see names and metadata.', o.tls ? null : 'Turn TLSi on for this traffic, or anti-malware and DLP will miss most of it.');
       F('am', 'SPACE', 'Anti-malware and NG Anti-Malware scan files moving between sites and users (WAN traffic) as well as internet downloads, up to 100 MB per file.');
       F('dlp', 'SPACE', 'DLP rules set to Any Application also apply to WAN traffic between sites and users, not only to cloud apps.');
     }
@@ -1538,7 +1538,7 @@
       });
     }
     // TLS inspection off: a note under SPACE
-    if (tlsOff(r) && !dropAtSpace) el('text', { x: N.space.x, y: N.space.y + 104, 'text-anchor': 'middle', class: 't-tls-off' }, layerBadges).textContent = '\u2715 TLS inspection off';
+    if (tlsOff(r) && !dropAtSpace) el('text', { x: N.space.x, y: N.space.y + 104, 'text-anchor': 'middle', class: 't-tls-off' }, layerBadges).textContent = '\u2715 TLSi off';
 
     // Numbered badges at each step's location
     const seen = {};
