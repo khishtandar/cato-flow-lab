@@ -488,6 +488,15 @@
   .t-ptag .nm { font-size: 12px; }
   .v-rbi { color: var(--c-threat); background: color-mix(in srgb, var(--c-threat) 12%, transparent); }
 
+  /* TLS inspection switched off: the panel shows it off and the engines that depend on it as limited */
+  .t-ptag.off > rect:first-child { fill: var(--surface-2); stroke: var(--bad); stroke-dasharray: 3 3; }
+  .t-ptag.off .nm { fill: var(--muted); text-decoration: line-through; }
+  .t-ptag.off .wh { fill: var(--bad); font-weight: 600; }
+  .t-ptag.limited .wh { fill: var(--warn); font-weight: 600; }
+  .t-tls-off { font: 600 11.5px var(--body); fill: var(--bad); }
+  .toggle.is-disabled { opacity: .5; cursor: not-allowed; }
+  .toggle.is-disabled input { cursor: not-allowed; }
+
   /* Features that do not apply to the drawn flow (shown when "Show features not applied" is ticked) */
   .feat.na { border-style: dashed; background: var(--surface-2); }
   .feat.na b { color: var(--muted); }
@@ -576,7 +585,7 @@
             <button type="button" data-v="voice" aria-pressed="false">Voice &amp; video</button>
             <button type="button" data-v="admin" aria-pressed="false">RDP / SSH</button>
           </div>
-          <label class="toggle" for="tls"><input type="checkbox" id="tls" checked> TLS inspection on</label>
+          <label class="toggle" for="tls" id="tlsLabel"><input type="checkbox" id="tls" checked> TLS inspection on</label>
           <label class="toggle" for="showNA"><input type="checkbox" id="showNA"> Show features not applied</label>
         </div>
         <div class="row" id="pubRow" hidden>
@@ -1345,6 +1354,9 @@
     return r;
   }
 
+  // TLS inspection is switched off and this flow has HTTPS that Cato would otherwise decrypt
+  const tlsOff = (r) => !!r && !state.tls && r.feats.some((f) => f.id === 'tls');
+
   // ---------- Features that do not apply to a flow ----------
   // Shown when "Show features not applied" is ticked, so you can see what a path gives up, and why.
   function notApplied(r, s, d, o) {
@@ -1525,6 +1537,9 @@
         el('title', {}, c).textContent = FEAT[f.id][0];
       });
     }
+    // TLS inspection off: a note under SPACE
+    if (tlsOff(r) && !dropAtSpace) el('text', { x: N.space.x, y: N.space.y + 104, 'text-anchor': 'middle', class: 't-tls-off' }, layerBadges).textContent = '\u2715 TLS inspection off';
+
     // Numbered badges at each step's location
     const seen = {};
     r.steps.forEach((st, i) => {
@@ -1555,7 +1570,7 @@
   let r_current = null;
   function row(g, P, y, it, label, extra) {
     const cat = FEAT[it.f.id][2];
-    const rw = el('g', { class: 't-ptag cat-' + cat + (extra ? ' ' + extra : ''), 'data-feat': it.f.id, tabindex: '0', role: 'button', 'aria-label': FEAT[it.f.id][0] + ', ' + it.f.at }, g);
+    const rw = el('g', { class: 't-ptag cat-' + cat + ((extra || it.extra) ? ' ' + (extra || it.extra) : ''), 'data-feat': it.f.id, tabindex: '0', role: 'button', 'aria-label': FEAT[it.f.id][0] + ', ' + it.f.at }, g);
     el('rect', { x: P.x + 10, y, width: P.w - 20, height: 20, rx: 5 }, rw);
     el('rect', { x: P.x + 17, y: y + 7, width: 6, height: 6, rx: 1.5, class: 'sq' }, rw);
     el('text', { x: P.x + 29, y: y + 14, class: 'nm' }, rw).textContent = label;
@@ -1579,6 +1594,11 @@
     const byPhase = (a, b) => (PHASE_ORDER.indexOf(PHASE[a.id] || '1st packet') - PHASE_ORDER.indexOf(PHASE[b.id] || '1st packet')) || (ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
     const inSpace = r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space')).sort(byPhase)
       .map((f) => ({ f, where: PHASE[f.id] || '1st packet' }));
+    // With TLS inspection off, HTTPS stays encrypted: show TLS as off, and the engines that need it as limited.
+    if (tlsOff(r)) inSpace.forEach((it) => {
+      if (it.f.id === 'tls') Object.assign(it, { where: 'off', extra: 'off' });
+      else if (it.f.id === 'am' || it.f.id === 'dlp') Object.assign(it, { where: 'limited', extra: 'limited' });
+    });
     const edge = sorted(r.feats.filter((f) => !(r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f, where: f.at }));
     const g = el('g', {}, layerPanels);
     el('rect', { x: P.x, y: P.y, width: P.w, height: P.h, rx: 12, class: 't-panel' }, g);
@@ -1753,6 +1773,11 @@
     const wan = wanFor(state.src, state.dst, state.wan);
     const r = analyze(state.src, state.dst, Object.assign({}, state, { wan }));
     if (r) { r.fm = featureMap(r); r.na = notApplied(r, state.src, state.dst, Object.assign({}, state, { wan })); }
+    // The TLS box only matters when the flow has HTTPS that goes through SPACE
+    const tlsUse = !!r && r.feats.some((f) => f.id === 'tls');
+    $('tls').disabled = !tlsUse;
+    $('tlsLabel').classList.toggle('is-disabled', !tlsUse);
+    $('tlsLabel').title = tlsUse ? '' : 'No HTTPS for Cato to decrypt on this flow. Pick Web / HTTPS or File transfer on a flow that goes through the Cato Cloud.';
     $('pubRow').hidden = !(state.src === 'inet' && state.dst === 'dmz');
     $('wanRow').hidden = !sockPair(state.src, state.dst);
     const alt = $('wan').querySelector('[data-v="altwan"]');
