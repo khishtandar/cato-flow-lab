@@ -488,6 +488,15 @@
   .t-ptag .nm { font-size: 12px; }
   .v-rbi { color: var(--c-threat); background: color-mix(in srgb, var(--c-threat) 12%, transparent); }
 
+  /* Features that do not apply to the drawn flow (shown when "Show features not applied" is ticked) */
+  .feat.na { border-style: dashed; background: var(--surface-2); }
+  .feat.na b { color: var(--muted); }
+  .na-tag { font: 600 11.5px/1 var(--body); color: var(--muted); border: 1px dashed var(--muted); border-radius: 999px; padding: 3px 7px; }
+  .t-ptag.na > rect:first-child { fill: var(--surface-2); stroke: var(--line); stroke-dasharray: 3 3; }
+  .t-ptag.na .sq { fill: var(--na); }
+  .t-ptag.na .nm { fill: var(--muted); }
+  .t-panel-na { fill: var(--surface-2); stroke: var(--na); stroke-width: 1.5; stroke-dasharray: 3 2; }
+
   /* Phones. Everything here applies only below 760px, so the PC layout is unchanged. */
   .m-only, .legend .m-only { display: none; }
   .main > * { min-width: 0; }
@@ -568,6 +577,7 @@
             <button type="button" data-v="admin" aria-pressed="false">RDP / SSH</button>
           </div>
           <label class="toggle" for="tls"><input type="checkbox" id="tls" checked> TLS inspection on</label>
+          <label class="toggle" for="showNA"><input type="checkbox" id="showNA"> Show features not applied</label>
         </div>
         <div class="row" id="pubRow" hidden>
           <span class="label">Publish via</span>
@@ -662,6 +672,7 @@
     prereq: ['Socket connection prerequisites', 'https://support.catonetworks.com/hc/en-us/articles/360000891085-Cato-Socket-Connection-Prerequisites-and-Known-Limitations'],
     altport: ['Alternate UDP port for DTLS', 'https://support.catonetworks.com/hc/en-us/articles/35977957054749-Using-an-Alternate-UDP-Port-for-Socket-and-Client-DTLS-Traffic'],
     clientfb: ['Client TCP fallback for the UDP tunnel', 'https://support.catonetworks.com/hc/en-us/articles/360002577917-Client-TCP-Fallback-for-UDP-Tunnel'],
+    plm: ['Packet loss mitigation for multi-tunnel links', 'https://support.catonetworks.com/hc/en-us/articles/360011176237-Packet-Loss-Mitigation-for-Multi-Tunnel-Links'],
     capture: ['How to capture traffic on a Socket', 'https://support.catonetworks.com/hc/en-us/articles/4413265670673-How-to-Capture-Traffic-on-a-Socket'],
     ilmm: ['What is Cato ILMM?', 'https://support.catonetworks.com/hc/en-us/articles/6249243964445-What-is-Cato-ILMM'],
     restricted: ['Restricted countries list', 'https://knowledge.catonetworks.com/docs/restricted-countries-list'],
@@ -693,7 +704,8 @@
     bgpmpls: ['BGP with the MPLS router', ['bgpsock', 'bgp', 'bgpfilter'], 'net'],
     netrules: ['Network rules', ['netrules'], 'net'],
     tcpacc: ['TCP Acceleration', ['tcpacc', 'scanner'], 'net'],
-    qos: ['Priority and packet loss mitigation', ['netrules'], 'net'],
+    qos: ['Priority and packet loss mitigation', ['netrules', 'plm'], 'net'],
+    plm: ['Packet loss mitigation', ['plm'], 'net'],
     msa: ['Hidden MSA block rule', ['inetfw', 'restricted'], 'fw'],
     inetfw: ['Internet Firewall', ['inetfw', 'fwrec', 'packetflow'], 'fw'],
     wanfw: ['WAN Firewall', ['fwrec', 'packetflow'], 'fw'],
@@ -725,7 +737,7 @@
   const PHASE_ORDER = ['1st packet', 'TLS', 'HTTP body', 'response', 'all phases'];
   const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
   // Evaluation order used when listing several features at one enforcement point.
-  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'offcloud', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'ipsecha', 'capture', 'ipseccap'];
+  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'offcloud', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'plm', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'ipsecha', 'capture', 'ipseccap'];
 
   // ---------- Topology ----------
   // Endpoints (pick: true) can be a flow's source or destination; devices, PoPs, SPACE and MPLS carry traffic.
@@ -768,7 +780,7 @@
   const PANEL = { x: 898, y: 112, w: 272, h: 424 };
   const SHORT = {
     transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', offcloud: 'Off-Cloud tunnel', bgpmpls: 'BGP to MPLS router',
-    netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', msa: 'MSA block rule',
+    netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', plm: 'Packet loss mitigation', msa: 'MSA block rule',
     inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
     am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
     rpf: 'Remote Port Forwarding', lpf: 'Local Port Forwarding', doublenat: 'ISP port forward',
@@ -1010,7 +1022,9 @@
         return;
       }
       F('netrules', 'Socket + PoP', 'Pick the transport, link, PoP and priority for this traffic. Bypass or local-breakout rules send traffic straight out and skip every Cato security engine, so keep them rare and documented.');
-      if (o.type === 'voice') F('qos', 'Socket + PoP', 'Give voice and video high priority. Packet loss mitigation duplicates packets on lossy links. UDP is not TCP-accelerated.');
+      if (o.type === 'voice') F('qos', 'Socket + PoP', (S.type === 'remote' || D.type === 'remote')
+        ? 'Give voice and video high priority. Packet loss mitigation duplicates packets over a Socket\'s links, so it only helps on the Socket side, not on the Cato Client tunnel. UDP is not TCP-accelerated.'
+        : 'Give voice and video high priority. Packet loss mitigation duplicates packets on lossy links. UDP is not TCP-accelerated.');
       if (tcp) F('tcpacc', 'SPACE', 'SPACE splits the TCP session at the PoP to speed up long-distance and lossy paths. Turn it off with a narrow rule for vulnerability scanners and TCP health checks: the proxy can make closed ports look open.');
     }
 
@@ -1075,7 +1089,11 @@
       r.steps.push({ at: d, where: 'Private app', text: 'The user reaches erp.corp.local. Nothing else in the data center network is reachable.' });
       F('privaccess', 'SPACE', 'A Private App object links the published app domain to the internal address and an App Connector group. Policy rules allow users or groups, optionally with device posture; everything else is blocked.');
       F('appconn', 'App Connector', 'Lightweight connector in the app environment that connects outbound to Cato, so the data center needs no inbound rules and is not added to the WAN. Put two connectors in the group for high availability.');
-      F('ips', 'SPACE', 'Private Access traffic still runs through the threat prevention engines in SPACE.');
+      F('ips', 'SPACE', 'Every permitted Private Access session still runs through the threat prevention engines in SPACE.');
+      if (webish) {
+        F('am', 'SPACE', 'Files moving to and from the private app are scanned by anti-malware, like any other traffic through Cato.');
+        F('dlp', 'SPACE', 'CASB/DLP inspection also applies to private app sessions, for example sensitive data uploaded to or downloaded from the app.');
+      }
       return r;
     }
 
@@ -1195,7 +1213,9 @@
       }
       F('egress', 'SPACE', "Traffic leaves with a Cato public IP. Allocate dedicated IPs when partners or SaaS allow-list your address. Your own public IP range can't be announced from Cato.");
       if (hasSocket(s)) F('capture', 'Socket', 'In the Socket WebUI, capture the LAN and the SD-WAN tunnel together to see where packets stop.');
-      if (ipsec) { ipsecCapture(); ipsecFailover(); } else F('resilience', 'Socket + PoP', 'If a link or PoP fails, the Socket moves its tunnels to another link or the next PoP automatically.');
+      if (ipsec) { ipsecCapture(); ipsecFailover(); } else F('resilience', 'Socket + PoP', S.type === 'remote'
+        ? 'If its PoP fails, the Cato Client reconnects to the next best PoP automatically.'
+        : 'If a link or PoP fails, the Socket moves its tunnels to another link or the next PoP automatically.');
       return r;
     }
 
@@ -1251,7 +1271,6 @@
       if (hq) F('doublenat', 'ISP router', 'The HQ Socket is behind the ISP router (double NAT). Other Sockets must be able to reach it, so forward the Off-Cloud port on 2.2.2.2 to the Socket WAN IP 10.1.1.1, or put the modem in bridge mode. A Socket with its own public IP needs no forward.');
       F('netrules', 'Socket', 'Primary transport Off-Cloud, secondary Cato Cloud: if the direct tunnel fails, the traffic goes back through the PoP and SPACE inspects it again.');
       if (o.type === 'voice') F('qos', 'Socket', 'Bandwidth priority still applies on the Socket. Over the open internet there is no Cato backbone, so latency and loss depend on the two ISPs.');
-      if (tcp) F('tcpacc', 'Socket', 'Does not apply: no PoP proxies the TCP session on the Off-Cloud path.');
       F('lanfw', 'Socket', 'If this traffic needs filtering, it has to happen on the Sockets (LAN Firewall), because no PoP sees it. Confirm with your Cato SE how the LAN Firewall applies to Off-Cloud traffic.');
       F('capture', 'Socket', 'Capture the LAN and WAN interfaces on both Sockets to confirm the traffic takes the Off-Cloud tunnel and not the PoP.');
       return r;
@@ -1272,7 +1291,6 @@
       F('bgpmpls', 'Socket', "Where the Socket model supports it, each Socket can be a BGP neighbor of the MPLS router on its Alternative WAN link (Cato supports BGP with a router on the LAN or Alt. WAN link). BGP exchanges routes with the carrier instead of static routes, and during a migration lets Cato reach sites that are still MPLS only. Use one ASN for all Cato neighbors, filter what you advertise and accept, and summarize on the MPLS router: Cato doesn't summarize routes. IPv4 only.", 'Confirm with your Cato SE which Socket models and interfaces support BGP on the Alternative WAN link.');
       F('netrules', 'Socket', 'Primary transport Cato Cloud, secondary Alternative WAN: MPLS only carries this traffic when the Cato path fails. (The reverse, MPLS as primary, is also possible, for example to keep voice on MPLS.)');
       if (o.type === 'voice') F('qos', 'Socket', 'Bandwidth priority still applies on the MPLS link. MPLS gives predictable latency for voice and video.');
-      if (tcp) F('tcpacc', 'Socket', 'Not available here: TCP Acceleration is greyed out on rules that use Alternative WAN, because no PoP proxies the session.');
       F('lanfw', 'Socket', 'The only Cato firewall that can still filter this traffic is the LAN Firewall on each Socket. Use it if MPLS traffic needs restricting.');
       F('capture', 'Socket', 'Capture the LAN and MPLS interfaces on both Sockets to confirm the traffic takes the MPLS path.');
       return r;
@@ -1307,7 +1325,13 @@
       : 'Implicit block. Add an allow rule for this source, destination and service. Use site and user groups so new sites inherit access.');
     addCommon();
     F('ips', 'SPACE', 'IPS also inspects east-west traffic between sites, users and clouds once the WAN Firewall allows it.');
-    if (o.type === 'file') F('am', 'SPACE', 'Anti-malware scans files moving between sites (WAN traffic) as well as internet downloads, up to 100 MB per file.');
+    if (webish) {
+      F('tls', 'SPACE', o.tls
+        ? 'TLS inspection also covers WAN HTTPS (between sites and users) when your TLS Inspection policy inspects it, so IPS, anti-malware and DLP can see inside.'
+        : 'Off: WAN HTTPS stays encrypted, so the engines only see names and metadata.', o.tls ? null : 'Turn TLS inspection on for this traffic, or anti-malware and DLP will miss most of it.');
+      F('am', 'SPACE', 'Anti-malware and NG Anti-Malware scan files moving between sites and users (WAN traffic) as well as internet downloads, up to 100 MB per file.');
+      F('dlp', 'SPACE', 'DLP rules set to Any Application also apply to WAN traffic between sites and users, not only to cloud apps.');
+    }
     if (hasSocket(s) || hasSocket(d)) F('capture', 'Socket', ipsec
       ? 'On the Socket end, capture the LAN and the SD-WAN tunnel together in the Socket WebUI. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the IPsec site.'
       : 'Capture the LAN and the SD-WAN tunnel together on each Socket. If the packet enters the tunnel but no reply comes back, look beyond the Socket: WAN Firewall events, routing, the far end.');
@@ -1315,8 +1339,61 @@
       ipsecCapture();
       ipsecFailover();
       if (hasSocket(s) || hasSocket(d)) F('resilience', 'Socket + PoP', 'The Socket end moves to another link or PoP on failure; the backbone reroutes between PoPs.');
-    } else F('resilience', 'Socket + PoP', 'Sockets move to another link or PoP on failure; the backbone reroutes between PoPs.');
+    } else F('resilience', 'Socket + PoP', (S.type === 'remote' || D.type === 'remote')
+      ? 'Sockets move to another link or PoP on failure, the Cato Client reconnects to the next best PoP, and the backbone reroutes between PoPs.'
+      : 'Sockets move to another link or PoP on failure; the backbone reroutes between PoPs.');
     return r;
+  }
+
+  // ---------- Features that do not apply to a flow ----------
+  // Shown when "Show features not applied" is ticked, so you can see what a path gives up, and why.
+  function notApplied(r, s, d, o) {
+    const S = N[s], D = N[d], v = r.verdict[0], na = [];
+    const tcp = o.type !== 'voice', webish = o.type === 'web' || o.type === 'file';
+    const add = (id, note) => { if (!na.some((x) => x.id === id) && !r.feats.some((f) => f.id === id)) na.push({ id, at: 'n/a', note }); };
+    const media = 'Not applied to voice and video media: there are no web pages or files to inspect.';
+    const noPop = (why) => { ['wanfw', 'ips', 'am'].forEach((id) => add(id, why)); if (webish) ['tls', 'dlp'].forEach((id) => add(id, why)); };
+    if (v === 'mpls') {
+      noPop('Skipped: on the MPLS backup the traffic goes Socket to Socket and never reaches a PoP, so SPACE does not inspect it.');
+      if (tcp) add('tcpacc', 'Greyed out on network rules that use Alternative WAN: no PoP proxies the TCP session.');
+    } else if (v === 'offcloud') {
+      noPop('Skipped: Off-Cloud traffic goes Socket to Socket over the internet and never reaches a PoP, so SPACE does not inspect it.');
+      if (tcp) add('tcpacc', 'Not supported on Off-Cloud: no PoP proxies the TCP session.');
+    } else if (v === 'local') {
+      const w = 'Not applied: traffic between ranges on the same Socket never leaves the site, so no PoP inspects it.';
+      ['wanfw', 'ips', 'am'].forEach((id) => add(id, w));
+    } else if (v === 'publish' && o.pub === 'lpf') {
+      const w = 'Not applied: LPF goes ISP router to Socket and never reaches a PoP, so Cato does not inspect it.';
+      ['ips', 'am'].forEach((id) => add(id, w));
+      if (webish) add('tls', w);
+      add('rpf', 'Not used: this server is published with LPF on the HQ ISP address. RPF would publish it on a Cato IP with IPS inspection.');
+    } else if (v === 'publish') {
+      if (webish) add('tls', 'Not applied: inbound TLS on RPF traffic is not decrypted, so the server must handle its own HTTPS security.');
+      add('lpf', 'Not used: RPF publishes the server on a Cato IP instead of the HQ ISP address.');
+    } else if (v === 'allow' || v === 'rbi') {
+      add('wanfw', 'Not used: internet traffic is checked by the Internet Firewall. The WAN Firewall is for traffic between your sites and users.');
+      if (!webish) ['tls', 'am', 'dlp'].forEach((id) => add(id, media));
+      if (!tcp) add('tcpacc', 'Not applied: UDP voice and video are not TCP-accelerated.');
+      if (v !== 'rbi') add('rbi', 'Not used: RBI opens risky or uncategorized sites in an isolated browser. This destination is allowed normally.');
+    } else if (v === 'rule' && D.type === 'papp') {
+      add('wanfw', 'Not used: private apps behind App Connectors are controlled by the Private Access policy, not the WAN Firewall.');
+      if (S.type === 'contractor') add('clienttunnel', 'Not needed: the Browser Access portal is clientless.');
+      if (!webish) ['am', 'dlp'].forEach((id) => add(id, media));
+    } else if (v === 'rule') {
+      add('inetfw', 'Not used: traffic between your sites and users is checked by the WAN Firewall. The Internet Firewall is for internet-bound traffic.');
+      add('egress', 'Not used: the traffic stays inside your Cato network, so it has no public egress IP.');
+      if (!webish) ['tls', 'am', 'dlp'].forEach((id) => add(id, media));
+      if (!tcp) add('tcpacc', 'Not applied: UDP voice and video are not TCP-accelerated.');
+    } else return na;
+    // Socket-only features an IPsec site does not get
+    if (S.type === 'ipsecsite' || D.type === 'ipsecsite') {
+      if (tcp) add('tcpacc', 'Not available on the IPsec side: Cato lists TCP Acceleration as a Socket feature.');
+      if (o.type === 'voice') add('plm', 'Not available on the IPsec tunnel: packet loss mitigation is a Socket feature.');
+      add('resilience', 'Not available for IPsec sites: Socket link and PoP failover, Internet Recovery and WAN Recovery need a Socket. IPsec uses primary and secondary tunnels instead.');
+    }
+    // The Cato Client has one tunnel, so there is nothing to duplicate packets over
+    if ((S.type === 'remote' || D.type === 'remote') && o.type === 'voice') add('plm', "Not available on the Cato Client tunnel: packet loss mitigation duplicates packets over a Socket's links.");
+    return na.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
   }
 
   // ---------- Where each feature runs on the diagram ----------
@@ -1476,9 +1553,9 @@
   }
 
   let r_current = null;
-  function row(g, P, y, it, label) {
+  function row(g, P, y, it, label, extra) {
     const cat = FEAT[it.f.id][2];
-    const rw = el('g', { class: 't-ptag cat-' + cat, 'data-feat': it.f.id, tabindex: '0', role: 'button', 'aria-label': FEAT[it.f.id][0] + ', ' + it.f.at }, g);
+    const rw = el('g', { class: 't-ptag cat-' + cat + (extra ? ' ' + extra : ''), 'data-feat': it.f.id, tabindex: '0', role: 'button', 'aria-label': FEAT[it.f.id][0] + ', ' + it.f.at }, g);
     el('rect', { x: P.x + 10, y, width: P.w - 20, height: 20, rx: 5 }, rw);
     el('rect', { x: P.x + 17, y: y + 7, width: 6, height: 6, rx: 1.5, class: 'sq' }, rw);
     el('text', { x: P.x + 29, y: y + 14, class: 'nm' }, rw).textContent = label;
@@ -1497,7 +1574,7 @@
     layerPanels.replaceChildren();
     r_current = r;
     if (!r) return;
-    const P = PANEL;
+    const P = state.showNA && r.na.length ? Object.assign({}, PANEL, { h: PANEL.h + 60 }) : PANEL;
     const sorted = (list) => list.slice().sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
     const byPhase = (a, b) => (PHASE_ORDER.indexOf(PHASE[a.id] || '1st packet') - PHASE_ORDER.indexOf(PHASE[b.id] || '1st packet')) || (ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
     const inSpace = r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space')).sort(byPhase)
@@ -1555,6 +1632,20 @@
       edge.slice(0, edgeMax).forEach((it) => { row(g, P, y, it, SHORT[it.f.id]); y += rowH; });
       if (edge.length > edgeMax) el('text', { x: P.x + 14, y: y + 12, class: 't-panel-sub' }, g).textContent = `+${edge.length - edgeMax} more below the diagram`;
     }
+
+    // Section 3: NOT APPLIED (only when the box is ticked)
+    if (!state.showNA || !r.na.length) return;
+    y = Math.max(y, P.y + 50) + 12;
+    el('line', { x1: P.x + 10, y1: y - 4, x2: P.x + P.w - 10, y2: y - 4, class: 't-panel-rule' }, g);
+    y += 14;
+    const nh = el('g', {}, g);
+    el('rect', { x: P.x + 14, y: y - 10, width: 12, height: 10, rx: 2, class: 't-panel-na' }, nh);
+    el('text', { x: P.x + 32, y, class: 't-panel-sec' }, nh).textContent = 'NOT APPLIED';
+    el('text', { x: P.x + P.w - 14, y, 'text-anchor': 'end', class: 't-panel-sub' }, nh).textContent = 'click for why';
+    y += 10;
+    const naMax = Math.max(0, Math.floor((bottom - y) / rowH));
+    r.na.slice(0, naMax).forEach((f) => { row(g, P, y, { f, where: 'n/a' }, SHORT[f.id], 'na'); y += rowH; });
+    if (r.na.length > naMax) el('text', { x: P.x + 14, y: y + 12, class: 't-panel-sub' }, g).textContent = `+${r.na.length - naMax} not applied, below the diagram`;
   }
 
   function renderResults(r) {
@@ -1577,6 +1668,15 @@
       </article>`;
     };
     const opts = r.options.map((f) => card(f, true)).join('');
+    const nas = state.showNA ? r.na.map((f) => {
+      const [title, kbs, cat] = FEAT[f.id];
+      const links = kbs.map((k) => `<a href="${KB[k][1]}" target="_blank" rel="noopener noreferrer">${esc(KB[k][0])}</a>`).join('');
+      return `<article class="feat na" id="feat-${f.id}" data-feat="${f.id}">
+        <div class="feat-h"><b>${esc(title)}</b><span class="feat-meta"><span class="tag static cat-${cat}">${CAT[cat]}</span><span class="na-tag">Not applied</span></span></div>
+        <p>${esc(f.note)}</p>
+        <div class="kb">${links}</div>
+      </article>`;
+    }).join('') : '';
     const feats = r.feats.map((f) => {
       const [title, kbs, cat] = FEAT[f.id];
       const links = kbs.map((k) => `<a href="${KB[k][1]}" target="_blank" rel="noopener noreferrer">${esc(KB[k][0])}</a>`).join('');
@@ -1598,7 +1698,7 @@
         </div>
       </div>
       ${steps ? `<div class="sect sect-steps"><h3>Path, hop by hop</h3><ol class="steps">${steps}</ol></div>` : ''}
-      ${feats || opts ? `<div class="sect sect-feats">${feats ? `<h3>Features involved</h3><div class="feats">${feats}</div>` : ''}${opts ? `<h3>To allow it</h3><div class="feats">${opts}</div>` : ''}</div>` : ''}`;
+      ${feats || opts ? `<div class="sect sect-feats">${feats ? `<h3>Features involved</h3><div class="feats">${feats}</div>` : ''}${opts ? `<h3>To allow it</h3><div class="feats">${opts}</div>` : ''}${nas ? `<h3>Not applied on this flow</h3><div class="feats">${nas}</div>` : ''}</div>` : ''}`;
     $('swap').addEventListener('click', () => setFlow(state.dst, state.src));
     $('copy').addEventListener('click', () => copySummary(r));
     box.querySelectorAll('.feat').forEach((c) => {
@@ -1620,7 +1720,8 @@
       '',
       'Features:',
       ...r.feats.map((f) => `- ${FEAT[f.id][0]} [${f.at}]: ${f.note}${f.warn ? ' WARNING: ' + f.warn : ''}`),
-      ...(r.options.length ? ['', 'To allow it:', ...r.options.map((f) => `- ${FEAT[f.id][0]} [${f.at}]: ${f.note}`)] : [])
+      ...(r.options.length ? ['', 'To allow it:', ...r.options.map((f) => `- ${FEAT[f.id][0]} [${f.at}]: ${f.note}`)] : []),
+      ...(state.showNA && r.na.length ? ['', 'Not applied on this flow:', ...r.na.map((f) => `- ${FEAT[f.id][0]}: ${f.note}`)] : [])
     ];
     const text = lines.join('\n');
     const done = () => { const t = $('toast'); if (t) { t.hidden = false; setTimeout(() => { t.hidden = true; }, 1600); } };
@@ -1651,7 +1752,7 @@
   function update() {
     const wan = wanFor(state.src, state.dst, state.wan);
     const r = analyze(state.src, state.dst, Object.assign({}, state, { wan }));
-    if (r) r.fm = featureMap(r);
+    if (r) { r.fm = featureMap(r); r.na = notApplied(r, state.src, state.dst, Object.assign({}, state, { wan })); }
     $('pubRow').hidden = !(state.src === 'inet' && state.dst === 'dmz');
     $('wanRow').hidden = !sockPair(state.src, state.dst);
     const alt = $('wan').querySelector('[data-v="altwan"]');
@@ -1807,6 +1908,14 @@
   bindSeg('wan', 'wan');
   $('type').addEventListener('click', () => syncSeg('type', state.type));
   $('tls').addEventListener('change', (e) => { state.tls = e.target.checked; update(); });
+  // "Show features not applied" is remembered in this browser
+  try { state.showNA = localStorage.getItem('cfl-showna') === '1'; } catch (e) { state.showNA = false; }
+  $('showNA').checked = state.showNA;
+  $('showNA').addEventListener('change', (e) => {
+    state.showNA = e.target.checked;
+    try { localStorage.setItem('cfl-showna', state.showNA ? '1' : '0'); } catch (err) { /* not remembered */ }
+    update();
+  });
 
   const presetBox = $('presets');
   PRESETS.forEach(([label, s, d, opt], i) => {
