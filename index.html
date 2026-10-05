@@ -449,6 +449,50 @@
   .t-panel-edge { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1.5; }
   .t-ptag .nm { font-size: 12px; }
   .v-rbi { color: var(--c-threat); background: color-mix(in srgb, var(--c-threat) 12%, transparent); }
+
+  /* Phones. Everything here applies only below 760px, so the PC layout is unchanged. */
+  .m-only, .legend .m-only { display: none; }
+  .main > * { min-width: 0; }
+  @media (max-width: 760px) {
+    .m-only { display: flex; }
+    .legend .m-only { display: inline-flex; }
+    .d-only, .legend .d-only { display: none; }
+    .disclaimer { max-width: none; }
+    .lede { font-size: 13.5px; }
+    .controls { padding: 12px; gap: 12px; }
+    .controls > * { min-width: 0; }
+    .row { gap: 6px 10px; }
+    .row > .label { width: 100%; }
+    .chips { flex-wrap: nowrap; overflow-x: auto; width: calc(100% + 24px); min-width: 0; margin-inline: -12px; padding: 2px 12px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; padding: 10px 13px; font-size: 13px; }
+    .seg { display: flex; width: 100%; }
+    .seg button { flex: 1 1 0; padding: 8px 6px; min-height: 44px; font-size: 12.5px; line-height: 1.2; white-space: normal; }
+    .toggle { min-height: 36px; }
+    .pick-row.m-only { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+    .pick-row .pick:first-child { grid-column: 1; grid-row: 1; }
+    .pick-row .pick:last-child { grid-column: 1; grid-row: 2; }
+    .pick-row .swap-btn { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+    .pick { display: grid; gap: 4px; min-width: 0; }
+    .pick select {
+      width: 100%; min-height: 44px; padding: 8px 10px;
+      font: 500 16px var(--body); color: var(--ink);
+      background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+    }
+    .pick select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .swap-btn { min-width: 44px; min-height: 44px; padding: 0; font-size: 18px; }
+    .hint { padding: 8px 12px; font-size: 13px; }
+    .map-bar { align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+    .map-bar .btn { flex: none; min-height: 38px; }
+    .canvas-scroll { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+    svg.topo { max-height: none; touch-action: pan-x pan-y; }
+    .canvas-scroll.fit svg.topo { min-width: 0; }
+    .legend { font-size: 12px; padding: 10px 12px; }
+    .res-head { padding: 14px 14px 12px; }
+    .res-title h2 { font-size: 20px; }
+    .res-actions .btn { min-height: 40px; }
+    .results .sect-feats .feats { grid-template-columns: 1fr; }
+  }
 </style>
 
 <div class="wrap">
@@ -464,6 +508,11 @@
   <div class="main">
     <section class="panel stage" aria-label="Network diagram">
       <div class="controls">
+        <div class="row m-only pick-row">
+          <label class="pick"><span class="label">From</span><select id="mFrom"></select></label>
+          <button type="button" class="btn swap-btn" id="mSwap" aria-label="Swap source and destination">&#8645;</button>
+          <label class="pick"><span class="label">To</span><select id="mTo"></select></label>
+        </div>
         <div class="row">
           <span class="label">Try a flow</span>
           <div class="chips" id="presets"></div>
@@ -488,14 +537,18 @@
         <div class="row" id="wanRow" hidden>
           <span class="label">WAN path</span>
           <div class="seg" id="wan" role="group" aria-label="WAN transport">
-            <button type="button" data-v="cloud" aria-pressed="true">Cato Cloud</button>
-            <button type="button" data-v="altwan" aria-pressed="false">Alternative WAN (MPLS)</button>
+            <button type="button" data-v="cloud" aria-pressed="true">Cato Cloud (primary)</button>
+            <button type="button" data-v="altwan" aria-pressed="false">MPLS backup (Cato path down)</button>
           </div>
         </div>
       </div>
       <div class="hint" id="hint" aria-live="polite"></div>
-      <div class="canvas-scroll">
-        <svg class="topo" id="topo" viewBox="0 0 1180 830" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ and Branch B."></svg>
+      <div class="map-bar m-only">
+        <span id="mapTip">Swipe sideways to see the whole map.</span>
+        <button type="button" class="btn" id="mapFit" aria-pressed="false">Fit to screen</button>
+      </div>
+      <div class="canvas-scroll" id="canvas">
+        <svg class="topo" id="topo" viewBox="0 0 1180 830" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ and Branch B that backs up the Cato Cloud."></svg>
       </div>
       <div class="legend">
         <span class="tag static cat-net">Connectivity</span>
@@ -508,9 +561,10 @@
       <div class="legend">
         <span><i class="sw"></i> Link or tunnel</span>
         <span><i class="sw bb"></i> PoP to Cato core (SPACE)</span>
-        <span><i class="sw mp"></i> MPLS (Alternative WAN)</span>
+        <span><i class="sw mp"></i> MPLS (backup, Alternative WAN)</span>
         <span><i class="sw fl"></i> Your traffic flow</span>
-        <span>Panel on the right: features for the drawn flow (hover to locate, click for details)</span>
+        <span class="d-only">Panel on the right: features for the drawn flow (hover to locate, click for details)</span>
+        <span class="m-only">Features panel: right side of the map. Tap a feature for its details.</span>
       </div>
     </section>
 
@@ -542,6 +596,8 @@
     secsvc: ['Cato Security Services', 'https://knowledge.catonetworks.com/docs/en/cato-security-services'],
     ranges: ['Configuring Network Ranges for a Site', 'https://support.catonetworks.com/hc/en-us/articles/4413280508433-Configuring-Network-Ranges-for-a-Site'],
     bgp: ['Using BGP in the Cato Cloud', 'https://support.catonetworks.com/hc/en-us/articles/7825408860573-Using-BGP-in-the-Cato-Cloud'],
+    bgpsock: ['Configuring BGP neighbors for a Cato Socket', 'https://support.catonetworks.com/hc/en-us/articles/4413273474065-Configuring-BGP-Neighbors-for-a-Cato-Socket'],
+    bgpfilter: ['Working with BGP filtering', 'https://support.catonetworks.com/hc/en-us/articles/23972529384733-Working-with-BGP-Filtering'],
     bgpipsec: ['BGP neighbors for an IPsec connection', 'https://support.catonetworks.com/hc/en-us/articles/4413280509457-Configuring-BGP-Neighbors-for-an-IPsec-Connection'],
     bfd: ['Configuring BFD for BGP neighbors', 'https://knowledge.catonetworks.com/docs/en/configuring-bfd-for-bgp-neighbors'],
     ikev2: ['Configuring IPsec IKEv2 Sites', 'https://support.catonetworks.com/hc/en-us/articles/4413265635473-Configuring-IPsec-IKEv2-Sites'],
@@ -577,7 +633,8 @@
     clienttunnel: ['Cato Client tunnel', ['clientfb'], 'net'],
     vsocket: ['vSocket in the cloud network', ['ranges', 'bgp'], 'net'],
     ipsec: ['IPsec site (IKEv2) with BGP', ['ikev2', 'bgpipsec', 'bfd'], 'net'],
-    altwan: ['Alternative WAN (MPLS)', ['altwan', 's2s', 'offcloud'], 'net'],
+    altwan: ['Alternative WAN (MPLS backup)', ['altwan', 's2s', 'offcloud'], 'net'],
+    bgpmpls: ['BGP with the MPLS router', ['bgpsock', 'bgp', 'bgpfilter'], 'net'],
     netrules: ['Network rules', ['netrules'], 'net'],
     tcpacc: ['TCP Acceleration', ['tcpacc', 'scanner'], 'net'],
     qos: ['Priority and packet loss mitigation', ['netrules'], 'net'],
@@ -612,7 +669,7 @@
   const PHASE_ORDER = ['1st packet', 'TLS', 'HTTP body', 'response', 'all phases'];
   const CAT = { net: 'Connectivity', fw: 'Firewall', threat: 'Threat prevention', data: 'Data protection', pub: 'Publishing', ops: 'Troubleshooting' };
   // Evaluation order used when listing several features at one enforcement point.
-  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
+  const ORDER = ['clienttunnel', 'portal', 'transport', 'vsocket', 'ipsec', 'appconn', 'altwan', 'bgpmpls', 'doublenat', 'lpf', 'lanfw', 'netrules', 'qos', 'msa', 'inetfw', 'rbi', 'wanfw', 'privaccess', 'rpf', 'tls', 'ips', 'am', 'dlp', 'tcpacc', 'routing', 'internetonly', 'egress', 'resilience', 'capture'];
 
   // ---------- Topology ----------
   // Endpoints (pick: true) can be a flow's source or destination; devices, PoPs, SPACE and MPLS carry traffic.
@@ -654,7 +711,7 @@
   // One features panel on the right of the Cato Cloud: CATO SPACE on top, AT THE EDGE below.
   const PANEL = { x: 898, y: 112, w: 272, h: 424 };
   const SHORT = {
-    transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'Alternative WAN (MPLS)',
+    transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', bgpmpls: 'BGP to MPLS router',
     netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', msa: 'MSA block rule',
     inetfw: 'Internet Firewall', wanfw: 'WAN Firewall', lanfw: 'LAN Firewall', tls: 'TLS inspection', ips: 'IPS',
     am: 'Anti-malware + Sandbox', dlp: 'CASB & DLP', egress: 'Egress IP', routing: 'Global routing table',
@@ -686,7 +743,7 @@
     ['Remote user to private app', 'remote', 'papp'],
     ['Contractor to private app (browser)', 'contractor', 'papp'],
     ['Remote user to HQ servers', 'remote', 'servers'],
-    ['Tokyo branch to HQ over MPLS', 'usersB', 'servers', { wan: 'altwan' }],
+    ['Tokyo to HQ on MPLS backup', 'usersB', 'servers', { wan: 'altwan' }],
     ['Tokyo branch to HQ via Cato', 'usersB', 'servers', { wan: 'cloud' }],
     ['Internet to server via LPF', 'inet', 'dmz', { pub: 'lpf' }],
     ['Internet to server via RPF', 'inet', 'dmz', { pub: 'rpf' }],
@@ -749,7 +806,7 @@
     el('line', { x1: N.sockB.x, y1: N.sockB.y, x2: N.sockB.x, y2: MPLS_Y, class: 't-link mpls' }, svg);
     const mg = el('g', { class: 't-mpls', 'data-key': 'mpls' }, svg);
     el('rect', { x: m.x - mw / 2, y: m.y - mh / 2, width: mw, height: mh, rx: mh / 2 }, mg);
-    el('text', { x: m.x, y: m.y + 5, 'text-anchor': 'middle' }, mg).textContent = 'MPLS · Alternative WAN';
+    el('text', { x: m.x, y: m.y + 13, 'text-anchor': 'middle' }, mg).textContent = 'MPLS · backup (Alternative WAN)';
     nodeEls.mpls = mg;
 
     // HQ ISP link, outside Cato
@@ -1102,16 +1159,17 @@
     // ----- Site to site over MPLS (Alternative WAN)
     if (o.wan === 'altwan' && mplsPair(s, d)) {
       const ea = S.edge, eb = D.edge;
-      r.verdict = ['mpls', 'Direct over MPLS, no PoP'];
-      r.why = 'A network rule sends this traffic over the Alternative WAN link: Socket to Socket across MPLS in an encrypted UDP tunnel. It never reaches a PoP or SPACE, so the WAN Firewall and threat engines do not inspect it.';
-      r.path = [s, ea, { x: N[ea].x, y: MPLS_Y }, { x: N[eb].x, y: MPLS_Y }, eb, d];
+      r.verdict = ['mpls', 'Backup over MPLS, no PoP'];
+      r.why = 'The Cato Cloud is the primary path between these sites and MPLS is the backup. When the Socket loses its path to the Cato Cloud, the network rule fails over to the secondary transport, Alternative WAN: Socket to Socket across MPLS in an encrypted UDP tunnel. While on backup the traffic never reaches a PoP or SPACE, so the WAN Firewall and threat engines do not inspect it.';
+      r.path = [s, ea, { x: N[ea].x, y: MPLS_Y - 8 }, { x: N[eb].x, y: MPLS_Y - 8 }, eb, d];
       r.steps.push(firstStep(s));
-      r.steps.push({ at: ea, where: 'Socket', text: `A network rule matches with Alternative WAN as the primary transport (Cato Cloud as secondary for failover). The ${N[ea].sub} Socket sends it out its MPLS interface.` });
-      r.steps.push({ at: 'mpls', where: 'MPLS', text: "The packet crosses the MPLS provider's network inside an encrypted UDP tunnel between the two Sockets. The MPLS router learns the Socket addresses in its VRF." });
-      r.steps.push({ at: eb, where: 'Socket', text: `The ${N[eb].sub} Socket unwraps the tunnel and delivers the packet.` });
+      r.steps.push({ at: ea, where: 'Socket', text: `The network rule has Cato Cloud as the primary transport and Alternative WAN as the secondary. The Cato Cloud path is down, so the ${N[ea].sub} Socket fails over and sends the packet out its MPLS interface.` });
+      r.steps.push({ at: 'mpls', where: 'MPLS', text: "The packet crosses the MPLS provider's network inside an encrypted UDP tunnel between the two Sockets. The carrier routes between the Sockets' MPLS addresses in your VRF; where the Socket supports it, BGP with the MPLS router exchanges these routes dynamically." });
+      r.steps.push({ at: eb, where: 'Socket', text: `The ${N[eb].sub} Socket unwraps the tunnel and delivers the packet. When the Cato Cloud path comes back, new traffic returns to the primary transport.` });
       r.steps.push(finalStep(d));
-      F('altwan', 'MPLS', 'Integrates an existing MPLS network with Cato. Common uses: keep voice on MPLS, or use MPLS as the backup when the internet links fail. If MPLS goes down, the secondary transport moves the traffic to the Cato Cloud.', 'This path skips SPACE: no WAN Firewall, IPS or anti-malware. Keep it for trusted, latency-sensitive traffic.');
-      F('netrules', 'Socket', 'Set the primary transport to Alternative WAN and the secondary to Cato Cloud (or the reverse to use MPLS only as backup). Some accounts send all VoIP over MPLS this way.');
+      F('altwan', 'MPLS', 'Keeps the existing MPLS network as the backup for the Cato Cloud. Sites keep talking over MPLS if their internet links or the PoP path fail.', 'While on backup this path skips SPACE: no WAN Firewall, IPS or anti-malware. Restrict it with the Socket LAN Firewall if needed.');
+      F('bgpmpls', 'Socket', "Where the Socket model supports it, each Socket can be a BGP neighbor of the MPLS router on its Alternative WAN link (Cato supports BGP with a router on the LAN or Alt. WAN link). BGP exchanges routes with the carrier instead of static routes, and during a migration lets Cato reach sites that are still MPLS only. Use one ASN for all Cato neighbors, filter what you advertise and accept, and summarize on the MPLS router: Cato doesn't summarize routes. IPv4 only.", 'Confirm with your Cato SE which Socket models and interfaces support BGP on the Alternative WAN link.');
+      F('netrules', 'Socket', 'Primary transport Cato Cloud, secondary Alternative WAN: MPLS only carries this traffic when the Cato path fails. (The reverse, MPLS as primary, is also possible, for example to keep voice on MPLS.)');
       if (o.type === 'voice') F('qos', 'Socket', 'Bandwidth priority still applies on the MPLS link. MPLS gives predictable latency for voice and video.');
       if (tcp) F('tcpacc', 'Socket', 'Not available here: TCP Acceleration is greyed out on rules that use Alternative WAN, because no PoP proxies the session.');
       F('lanfw', 'Socket', 'The only Cato firewall that can still filter this traffic is the LAN Firewall on each Socket. Use it if MPLS traffic needs restricting.');
@@ -1124,7 +1182,7 @@
     const sPop = popOf(s), dPop = popOf(d);
     r.verdict = ['rule', 'Needs a WAN Firewall allow rule'];
     r.why = 'Between your own sites, users and clouds, the WAN Firewall ends with an implicit block. Nothing passes until you add an allow rule for this flow.';
-    if (mplsPair(s, d)) r.why += ' These two sites also share an MPLS link: switch the WAN path to Alternative WAN to compare.';
+    if (mplsPair(s, d)) r.why += ' These two sites also have MPLS as a backup: switch the WAN path to MPLS backup to see the failover path.';
     r.steps.push(firstStep(s));
     const e1 = edgeStep(s, true);
     if (e1) r.steps.push(e1);
@@ -1355,7 +1413,7 @@
       el('tspan', { x: P.x + 14, dy: 15 }, t).textContent = r.dropReason;
       y += 36;
     } else if (!inSpace.length) {
-      const why = r.verdict[0] === 'mpls' ? ['Goes Socket to Socket over MPLS:', 'SPACE never sees this flow.']
+      const why = r.verdict[0] === 'mpls' ? ['On MPLS backup, Socket to Socket:', 'SPACE never sees this flow.']
         : r.verdict[0] === 'local' ? ['Stays on one Socket:', 'SPACE never sees this flow.']
         : (r.verdict[0] === 'publish' && state.pub === 'lpf') ? ['LPF goes ISP router to Socket:', 'SPACE never sees this flow.']
         : ['No SPACE feature acts on', 'this flow.'];
@@ -1466,7 +1524,9 @@
 
   function renderHint() {
     const h = $('hint');
-    if (state.pending) h.innerHTML = `<i class="dot"></i><span>Source: <strong>${esc(N[state.pending].label)}</strong>. Now click the destination, or click it again to cancel.</span>`;
+    const phone = mobileMQ.matches, act = phone ? 'tap' : 'click';
+    if (state.pending) h.innerHTML = `<i class="dot"></i><span>Source: <strong>${esc(N[state.pending].label)}</strong>. Now ${act} the destination, or ${act} it again to cancel.</span>`;
+    else if (phone) h.innerHTML = '<i class="dot"></i><span>Pick From and To above, or tap a box on the map and then another.</span>';
     else h.innerHTML = '<i class="dot"></i><span>Drag between two boxes, or click a source and then a destination. PoPs, SPACE, Sockets, App Connectors and MPLS carry the traffic; they are not endpoints.</span>';
   }
 
@@ -1479,6 +1539,8 @@
     if (r) r.fm = featureMap(r);
     $('pubRow').hidden = !(state.src === 'inet' && state.dst === 'dmz');
     $('wanRow').hidden = !mplsPair(state.src, state.dst);
+    $('mFrom').value = state.src;
+    $('mTo').value = state.dst;
     syncSeg('pub', state.pub);
     syncSeg('wan', state.wan);
     renderFlow(r);
@@ -1495,7 +1557,26 @@
     state.src = s; state.dst = d; state.pending = null;
     if (opt) Object.assign(state, opt);
     update();
+    showFlowOnPhone();
   }
+
+  // ---------- Phones ----------
+  // Below 760px the map is wider than the screen: it scrolls sideways, and each new flow is scrolled into view.
+  const mobileMQ = window.matchMedia('(max-width: 760px)');
+  const canvas = $('canvas');
+  function showFlowOnPhone() {
+    if (!mobileMQ.matches || canvas.classList.contains('fit')) return;
+    const cx = (N[state.src].x + N[state.dst].x) / 2;
+    const left = (cx / 1180) * svg.clientWidth - canvas.clientWidth / 2;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    canvas.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' });
+  }
+  const PICK_NAMES = {
+    users: 'Branch A users', guest: 'Branch A guest Wi-Fi', servers: 'HQ server VLAN', dmz: 'HQ web server (DMZ)',
+    usersB: 'Branch B users (Tokyo)', lanC: 'Branch C LAN (IPsec)', remote: 'Remote user (Cato Client)',
+    papp: 'Private app (erp.corp.local)', contractor: 'Contractor laptop', cloud: 'Cloud VPC / VNet',
+    saas: 'Internet & SaaS', risky: 'Risky website', inet: 'Anyone on the internet'
+  };
 
   // ---------- Interaction ----------
   function svgPoint(evt) {
@@ -1539,6 +1620,7 @@
     if (g && g.dataset.pick !== from) setFlow(from, g.dataset.pick);
   });
   window.addEventListener('pointerup', () => { if (drag) { drag = null; layerRubber.replaceChildren(); } });
+  svg.addEventListener('pointercancel', () => { drag = null; layerRubber.replaceChildren(); });
   svg.addEventListener('keydown', (e) => {
     const g = e.target.closest && e.target.closest('[data-pick]');
     if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); clickNode(g.dataset.pick); }
@@ -1568,8 +1650,26 @@
     presetBox.appendChild(b);
   });
 
+  for (const id of ['mFrom', 'mTo']) {
+    const sel = $(id);
+    for (const k in N) if (N[k].pick) sel.add(new Option(PICK_NAMES[k] || N[k].label, k));
+  }
+  // Choosing the end that is already on the other side swaps the two.
+  $('mFrom').addEventListener('change', (e) => { const v = e.target.value; setFlow(v, v === state.dst ? state.src : state.dst); });
+  $('mTo').addEventListener('change', (e) => { const v = e.target.value; setFlow(v === state.src ? state.dst : state.src, v); });
+  $('mSwap').addEventListener('click', () => setFlow(state.dst, state.src));
+  $('mapFit').addEventListener('click', (e) => {
+    const fit = canvas.classList.toggle('fit');
+    e.currentTarget.textContent = fit ? 'Zoom in' : 'Fit to screen';
+    e.currentTarget.setAttribute('aria-pressed', String(fit));
+    $('mapTip').textContent = fit ? 'Whole map. Zoom in to read the labels.' : 'Swipe sideways to see the whole map.';
+    if (!fit) showFlowOnPhone();
+  });
+  mobileMQ.addEventListener('change', renderHint);
+
   drawStatic();
   update();
+  showFlowOnPhone();
 })();
 </script>
 
