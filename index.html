@@ -158,7 +158,10 @@
   .top-side { display: flex; align-items: center; gap: 10px; }
   .theme-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
   .theme-btn span[aria-hidden] { font-size: 15px; line-height: 1; }
-  .edit-btn { flex: none; min-height: 36px; }
+  /* Edit layout buttons, over the diagram's top-right corner */
+  .edit-tools { position: relative; height: 0; z-index: 3; }
+  .edit-tools-in { position: absolute; top: 10px; right: 12px; display: flex; gap: 8px; }
+  .edit-tools .btn { min-height: 32px; box-shadow: var(--shadow); }
   .edit-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
   .disclaimer {
     font-size: 12.5px;
@@ -258,7 +261,11 @@
   svg.topo.editing [data-key] { cursor: grab; }
   svg.topo.editing.dragging, svg.topo.editing.dragging * { cursor: grabbing; }
   svg.topo.editing .t-node rect { stroke-dasharray: 5 3; }
-  svg.topo.editing [data-key]:hover rect, svg.topo.editing [data-key]:hover circle { stroke: var(--accent); }
+  svg.topo.editing [data-key]:hover > rect, svg.topo.editing [data-key]:hover > circle { stroke: var(--accent); }
+  svg.topo.editing .t-zone { fill: transparent; }
+  svg.topo.editing .sel > rect, svg.topo.editing .sel > circle { stroke: var(--accent); stroke-width: 3; }
+  svg.topo.editing .sel > .t-zone-label { fill: var(--accent-ink); }
+  .t-marquee { fill: var(--accent-soft); fill-opacity: .45; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
   .t-node.pick:hover rect, .t-node.pick:focus rect { stroke: var(--accent); }
   .t-node.device rect { fill: var(--surface-2); }
   .t-node.isp rect { fill: var(--surface-2); stroke-dasharray: 4 3; }
@@ -521,8 +528,7 @@
     .legend .m-only { display: inline-flex; }
     .d-only, .legend .d-only { display: none; }
     .disclaimer { max-width: none; }
-    .top-side { width: 100%; align-items: stretch; flex-wrap: wrap; }
-    .top-side .disclaimer { flex-basis: 100%; }
+    .top-side { width: 100%; align-items: stretch; }
     .lede { font-size: 13.5px; }
     .controls { padding: 12px; gap: 12px; }
     .controls > * { min-width: 0; }
@@ -552,6 +558,9 @@
     .canvas-scroll { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
     svg.topo { max-height: none; touch-action: pan-x pan-y; }
     svg.topo.editing { touch-action: none; }
+    .edit-tools { height: auto; }
+    .edit-tools-in { position: static; justify-content: flex-end; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+    .edit-tools .btn { box-shadow: none; min-height: 38px; }
     .canvas-scroll.fit svg.topo { min-width: 0; }
     .legend { font-size: 12px; padding: 10px 12px; }
     .res-head { padding: 14px 14px 12px; }
@@ -569,8 +578,6 @@
       <p class="lede">Drag a line between two points on the network, or click one and then the other. The lab traces the path through the Cato Cloud, MPLS or the open internet, and shows which features act on it, where they run, and the Knowledge Base articles to read.</p>
     </div>
     <div class="top-side">
-      <button type="button" class="btn" id="resetBtn" hidden>Reset layout</button>
-      <button type="button" class="btn edit-btn" id="editBtn" aria-pressed="false">Edit layout</button>
       <button type="button" class="btn theme-btn" id="themeBtn" aria-label="Switch to dark theme"><span aria-hidden="true" id="themeIcon">&#9789;</span> <span id="themeText">Dark</span></button>
       <p class="disclaimer">Unofficial study aid, not affiliated with Cato Networks. A simplified model: real behaviour depends on account settings and software version.</p>
     </div>
@@ -620,6 +627,10 @@
         <span id="mapTip">Swipe sideways to see the whole map.</span>
         <button type="button" class="btn" id="mapFit" aria-pressed="false">Fit to screen</button>
       </div>
+      <div class="edit-tools"><div class="edit-tools-in">
+        <button type="button" class="btn" id="resetBtn" hidden>Reset layout</button>
+        <button type="button" class="btn edit-btn" id="editBtn" aria-pressed="false">Edit layout</button>
+      </div></div>
       <div class="canvas-scroll" id="canvas">
         <svg class="topo" id="topo" viewBox="0 0 1180 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
       </div>
@@ -839,6 +850,9 @@
   ];
 
   const state = { src: 'users', dst: 'saas', type: 'web', tls: true, pub: 'rpf', wan: 'cloud', pending: null };
+  // Edit layout: on/off, the selected objects (by data-key), and the drag or selection box in progress
+  let editing = false, move = null, marquee = null, moveFrame = 0;
+  const sel = new Set();
 
   // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -877,9 +891,28 @@
   let layerFlow, layerRubber, layerBadges, layerPanels, spaceLine1, spaceLine2, inetEl;
   const nodeEls = {};
 
-  function zone(x, y, w, h, label) {
-    el('rect', { x, y, width: w, height: h, rx: 14, class: 't-zone' }, svg);
-    el('text', { x: x + 12, y: y + 20, class: 't-zone-label' }, svg).textContent = label;
+  // Site boxes, labels and the Cato Cloud backdrop (all movable in Edit layout)
+  const ZONES = {
+    zHQ: { x: 10, y: 605, w: 270, h: 210, label: 'HQ / Data center · Toronto' },
+    zA: { x: 290, y: 605, w: 265, h: 210, label: 'Branch A · Toronto' },
+    zB: { x: 565, y: 605, w: 230, h: 210, label: 'Branch B · Tokyo' },
+    zC: { x: 805, y: 605, w: 195, h: 210, label: 'Branch C · Chicago' },
+    zRoad: { x: 110, y: 434, label: 'On the road' },
+    zApps: { x: 22, y: 255, w: 276, h: 105, label: 'Private apps · Toronto DC' },
+    zCloud: { x: 305, y: 205, w: 570, h: 310, cloud: true }
+  };
+  function zone(k) {
+    const z = ZONES[k], g = el('g', { 'data-key': k }, svg);
+    if (z.cloud) {
+      el('rect', { x: z.x, y: z.y, width: z.w, height: z.h, rx: 110, class: 't-cloud' }, g);
+      el('text', { x: z.x + 347, y: z.y + 29, class: 't-cloud-label' }, g).textContent = 'CATO CLOUD';
+      el('text', { x: z.x + 285, y: z.y + 301, 'text-anchor': 'middle', class: 't-link-label' }, g).textContent = 'SPACE runs in every PoP';
+    } else if (!z.w) {
+      el('text', { x: z.x, y: z.y, 'text-anchor': 'middle', class: 't-zone-label' }, g).textContent = z.label;
+    } else {
+      el('rect', { x: z.x, y: z.y, width: z.w, height: z.h, rx: 14, class: 't-zone' }, g);
+      el('text', { x: z.x + 12, y: z.y + 20, class: 't-zone-label' }, g).textContent = z.label;
+    }
   }
 
   function drawStatic() {
@@ -891,17 +924,10 @@
     el('rect', { x: 0, y: 0, width: 1180, height: 890, fill: 'url(#dots)' }, svg);
 
     // Zones along the bottom
-    zone(10, 605, 270, 210, 'HQ / Data center · Toronto');
-    zone(290, 605, 265, 210, 'Branch A · Toronto');
-    zone(565, 605, 230, 210, 'Branch B · Tokyo');
-    zone(805, 605, 195, 210, 'Branch C · Chicago');
-    el('text', { x: 110, y: 434, 'text-anchor': 'middle', class: 't-zone-label' }, svg).textContent = 'On the road';
-    zone(22, 255, 276, 105, 'Private apps · Toronto DC');
+    for (const k of ['zHQ', 'zA', 'zB', 'zC', 'zRoad', 'zApps']) zone(k);
 
     // Cato Cloud: every PoP connects to the shared core, where SPACE inspects the traffic
-    el('rect', { x: 305, y: 205, width: 570, height: 310, rx: 110, class: 't-cloud' }, svg);
-    el('text', { x: 652, y: 234, class: 't-cloud-label' }, svg).textContent = 'CATO CLOUD';
-    el('text', { x: 590, y: 506, 'text-anchor': 'middle', class: 't-link-label' }, svg).textContent = 'SPACE runs in every PoP';
+    zone('zCloud');
 
     // MPLS (Alternative WAN) between HQ, Branch A and Branch B
     const m = N.mpls, [mw, mh] = BOX.mpls;
@@ -1598,7 +1624,7 @@
     rw.addEventListener('pointerleave', off);
     rw.addEventListener('focus', on);
     rw.addEventListener('blur', off);
-    rw.addEventListener('click', () => openCard(it.f.id));
+    rw.addEventListener('click', () => { if (!editing) openCard(it.f.id); });
     rw.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(it.f.id); } });
   }
 
@@ -1606,7 +1632,8 @@
     layerPanels.replaceChildren();
     r_current = r;
     if (!r) return;
-    const P = state.showNA && r.na.length ? Object.assign({}, PANEL, { h: PANEL.h + 60 }) : PANEL;
+    const P = Object.assign({}, PANEL, state.showNA && r.na.length ? { h: PANEL.h + 60 } : {});
+    P.y = Math.min(P.y, 886 - P.h);
     const sorted = (list) => list.slice().sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
     const byPhase = (a, b) => (PHASE_ORDER.indexOf(PHASE[a.id] || '1st packet') - PHASE_ORDER.indexOf(PHASE[b.id] || '1st packet')) || (ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
     const inSpace = r.feats.filter((f) => (r.fm.byFeat[f.id] || []).includes('space')).sort(byPhase)
@@ -1617,7 +1644,7 @@
       else if (it.f.id === 'am' || it.f.id === 'dlp') Object.assign(it, { where: 'limited', extra: 'limited' });
     });
     const edge = sorted(r.feats.filter((f) => !(r.fm.byFeat[f.id] || []).includes('space'))).map((f) => ({ f, where: f.at }));
-    const g = el('g', {}, layerPanels);
+    const g = el('g', { 'data-key': 'panel' }, layerPanels);
     el('rect', { x: P.x, y: P.y, width: P.w, height: P.h, rx: 12, class: 't-panel' }, g);
     el('text', { x: P.x + 14, y: P.y + 22, class: 't-panel-title' }, g).textContent = 'FEATURES ON THIS FLOW';
     el('line', { x1: P.x, y1: P.y + 32, x2: P.x + P.w, y2: P.y + 32, class: 't-panel-rule' }, g);
@@ -1777,7 +1804,7 @@
   function renderHint() {
     const h = $('hint');
     if (editing) {
-      h.innerHTML = '<i class="dot"></i><span><strong>Edit layout:</strong> drag any box, PoP, SPACE or the MPLS / Off-Cloud bars to move it. Positions are saved in this browser. Click Done editing when finished.</span>';
+      h.innerHTML = '<i class="dot"></i><span><strong>Edit layout:</strong> drag anything to move it. Shift-click, or drag a box around objects, to select several and move them together; arrow keys nudge the selection. Saved in this browser.</span>';
       return;
     }
     const phone = mobileMQ.matches, act = phone ? 'tap' : 'click';
@@ -1812,6 +1839,7 @@
     renderPanels(r);
     renderResults(r);
     renderHint();
+    applySel();
     document.querySelectorAll('#presets .chip').forEach((c) => {
       const p = PRESETS[+c.dataset.i], opt = p[3] || {};
       const match = p[1] === state.src && p[2] === state.dst && Object.keys(opt).every((k) => state[k] === opt[k]);
@@ -1906,14 +1934,24 @@
   }
 
   // ---------- Edit layout ----------
-  // With Edit layout on, dragging any box, PoP, SPACE or the MPLS / Off-Cloud bars moves it. Links and flows
-  // follow, the new positions are remembered in this browser, and Reset layout puts everything back.
+  // With Edit layout on, any object on the map can be dragged: boxes, PoPs, SPACE, the MPLS / Off-Cloud bars, the
+  // features panel, the site and Cato Cloud boxes. Shift-click or drag a box around objects to select several and
+  // move them together; arrow keys nudge the selection. Positions are remembered in this browser; Reset layout puts
+  // everything back.
   const HOME = {};
   for (const k in N) HOME[k] = { x: N[k].x, y: N[k].y };
   HOME.offbar = { x: OFFBAR.x0, y: OFFBAR.y };
-  const posOf = (k) => (k === 'offbar' ? { x: OFFBAR.x0, y: OFFBAR.y } : { x: N[k].x, y: N[k].y });
+  HOME.panel = { x: PANEL.x, y: PANEL.y };
+  for (const k in ZONES) HOME[k] = { x: ZONES[k].x, y: ZONES[k].y };
+  function posOf(k) {
+    if (k === 'offbar') return { x: OFFBAR.x0, y: OFFBAR.y };
+    const o = k === 'panel' ? PANEL : ZONES[k] || N[k];
+    return { x: o.x, y: o.y };
+  }
   function moveTo(k, x, y) {
-    if (k === 'offbar') { OFFBAR.x0 = x; OFFBAR.x1 = x + OFFBAR_W; OFFBAR.y = y; } else { N[k].x = x; N[k].y = y; }
+    if (k === 'offbar') { OFFBAR.x0 = x; OFFBAR.x1 = x + OFFBAR_W; OFFBAR.y = y; return; }
+    const o = k === 'panel' ? PANEL : ZONES[k] || N[k];
+    o.x = x; o.y = y;
   }
   function loadLayout() {
     let saved = null;
@@ -1938,9 +1976,33 @@
     drawStatic();
     update();
   }
-  let editing = false, move = null, moveFrame = 0;
+  const keyEl = (k) => svg.querySelector(`[data-key="${k}"]`);
+  function bboxOf(k) {
+    const e = keyEl(k);
+    if (!e) return null;
+    try { const b = e.getBBox(); return { x0: b.x, y0: b.y, x1: b.x + b.width, y1: b.y + b.height }; } catch (err) { return null; }
+  }
+  function unionBox(keys) {
+    const u = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    keys.forEach((k) => {
+      const b = bboxOf(k);
+      if (b) { u.x0 = Math.min(u.x0, b.x0); u.y0 = Math.min(u.y0, b.y0); u.x1 = Math.max(u.x1, b.x1); u.y1 = Math.max(u.y1, b.y1); }
+    });
+    return u;
+  }
+  function applySel() {
+    svg.querySelectorAll('[data-key]').forEach((e) => e.classList.toggle('sel', editing && sel.has(e.dataset.key)));
+  }
+  // Moves the selected objects by (dx, dy) from their start positions, keeping all of them inside the map.
+  function shiftSel(start, box, dx, dy) {
+    dx = Math.min(1180 - box.x1, Math.max(-box.x0, dx));
+    dy = Math.min(890 - box.y1, Math.max(-box.y0, dy));
+    for (const k in start) moveTo(k, start[k].x + dx, start[k].y + dy);
+    if (!moveFrame) moveFrame = requestAnimationFrame(() => { moveFrame = 0; redraw(); });
+  }
   function setEditing(on) {
     editing = on;
+    sel.clear();
     hideChooser();
     state.pending = null;
     svg.classList.toggle('editing', on);
@@ -1956,18 +2018,58 @@
     redraw();
   });
 
-  let drag = null;
-  svg.addEventListener('pointerdown', (e) => {
-    if (editing) {
-      const t = e.target.closest('[data-key]');
-      if (!t) return;
-      const p = svgPoint(e), k = t.dataset.key, at = posOf(k);
-      move = { k, dx: p.x - at.x, dy: p.y - at.y };
+  // In edit mode: press on an object to move it (with the rest of the selection), or on empty space to draw a
+  // selection box. Shift, Ctrl or Cmd adds to the selection.
+  function editDown(e) {
+    const t = e.target.closest('[data-key]'), p = svgPoint(e), add = e.shiftKey || e.ctrlKey || e.metaKey;
+    if (t) {
+      const k = t.dataset.key;
+      if (add && sel.has(k)) { sel.delete(k); applySel(); return; }
+      if (!add && !sel.has(k)) sel.clear();
+      sel.add(k);
+      applySel();
+      const start = {};
+      sel.forEach((s) => { start[s] = posOf(s); });
+      move = { p, start, box: unionBox([...sel]) };
       svg.classList.add('dragging');
-      try { svg.setPointerCapture(e.pointerId); } catch (err) { /* moves still arrive over the map */ }
-      e.preventDefault();
+    } else {
+      if (!add) sel.clear();
+      applySel();
+      const boxes = {};
+      for (const k in HOME) boxes[k] = bboxOf(k);
+      marquee = { p, base: new Set(sel), boxes };
+    }
+    try { svg.setPointerCapture(e.pointerId); } catch (err) { /* moves still arrive over the map */ }
+    e.preventDefault();
+  }
+  function editMove(e) {
+    const p = svgPoint(e);
+    if (move) {
+      const snap = (v) => Math.round(v / 5) * 5;
+      shiftSel(move.start, move.box, snap(p.x - move.p.x), snap(p.y - move.p.y));
       return;
     }
+    const x0 = Math.min(p.x, marquee.p.x), x1 = Math.max(p.x, marquee.p.x);
+    const y0 = Math.min(p.y, marquee.p.y), y1 = Math.max(p.y, marquee.p.y);
+    layerRubber.replaceChildren();
+    el('rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, class: 't-marquee' }, layerRubber);
+    // An object is selected when it sits entirely inside the box
+    sel.clear();
+    marquee.base.forEach((k) => sel.add(k));
+    for (const k in marquee.boxes) {
+      const b = marquee.boxes[k];
+      if (b && b.x0 >= x0 && b.x1 <= x1 && b.y0 >= y0 && b.y1 <= y1) sel.add(k);
+    }
+    applySel();
+  }
+  function editUp() {
+    if (move) { move = null; svg.classList.remove('dragging'); saveLayout(); }
+    if (marquee) { marquee = null; layerRubber.replaceChildren(); }
+  }
+
+  let drag = null;
+  svg.addEventListener('pointerdown', (e) => {
+    if (editing) { editDown(e); return; }
     const g = e.target.closest('[data-pick]');
     if (!g) {
       if (state.pending) { state.pending = null; update(); }
@@ -1977,14 +2079,7 @@
     e.preventDefault();
   });
   svg.addEventListener('pointermove', (e) => {
-    if (move) {
-      // Snap to a 5 px grid and keep the object inside the map
-      const p = svgPoint(e), snap = (v) => Math.round(v / 5) * 5;
-      const x = Math.min(1170, Math.max(10, snap(p.x - move.dx))), y = Math.min(880, Math.max(10, snap(p.y - move.dy)));
-      moveTo(move.k, x, y);
-      if (!moveFrame) moveFrame = requestAnimationFrame(() => { moveFrame = 0; redraw(); });
-      return;
-    }
+    if (move || marquee) { editMove(e); return; }
     if (!drag) return;
     if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
     drag.moved = true;
@@ -1992,14 +2087,8 @@
     layerRubber.replaceChildren();
     el('line', { x1: a.x, y1: a.y, x2: p.x, y2: p.y, class: 't-rubber' }, layerRubber);
   });
-  function endMove() {
-    if (!move) return;
-    move = null;
-    svg.classList.remove('dragging');
-    saveLayout();
-  }
   svg.addEventListener('pointerup', (e) => {
-    if (move) { endMove(); return; }
+    if (move || marquee) { editUp(); return; }
     if (!drag) return;
     const from = drag.from, moved = drag.moved;
     drag = null;
@@ -2010,14 +2099,29 @@
     if (g && g.dataset.pick !== from) userFlow(from, g.dataset.pick);
   });
   window.addEventListener('pointerup', () => { if (drag) { drag = null; layerRubber.replaceChildren(); } });
-  svg.addEventListener('pointercancel', () => { endMove(); drag = null; layerRubber.replaceChildren(); });
+  svg.addEventListener('pointercancel', () => { editUp(); drag = null; layerRubber.replaceChildren(); });
   svg.addEventListener('keydown', (e) => {
     const g = e.target.closest && e.target.closest('[data-pick]');
     if (editing) return;
     if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); clickNode(g.dataset.pick); }
     if (e.key === 'Escape' && state.pending) { state.pending = null; update(); }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editing && chooser.hidden) setEditing(false); });
+  // Edit mode keys: arrows nudge the selection (Shift for bigger steps), Esc clears it, a second Esc leaves edit mode.
+  const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  document.addEventListener('keydown', (e) => {
+    if (!editing || !chooser.hidden || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (e.key === 'Escape') {
+      if (sel.size) { sel.clear(); applySel(); } else setEditing(false);
+      return;
+    }
+    const a = ARROWS[e.key];
+    if (!a || !sel.size || move) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 20 : 5, start = {};
+    sel.forEach((k) => { start[k] = posOf(k); });
+    shiftSel(start, unionBox([...sel]), a[0] * step, a[1] * step);
+    saveLayout();
+  });
 
   function bindSeg(id, key) {
     $(id).addEventListener('click', (e) => {
