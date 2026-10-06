@@ -805,7 +805,9 @@
   };
   const BOX = { end: [150, 50], dev: [100, 44], isp: [118, 44], mpls: [460, 36] };
   // The HQ ISP link: from the internet over the top and down the far left edge to the ISP router, never through Cato.
-  const ispWaypoints = () => [{ x: 5, y: N.inet.y }, { x: 5, y: N.isp.y }];
+  // It runs 90 units left of the internet box or the ISP router, whichever is further left (x 5 in the default layout).
+  const ispX = () => Math.min(N.inet.x, N.isp.x) - 90;
+  const ispWaypoints = () => [{ x: ispX(), y: N.inet.y }, { x: ispX(), y: N.isp.y }];
   // One features panel on the right of the Cato Cloud: CATO SPACE on top, AT THE EDGE below.
   const PANEL = { x: 898, y: 112, w: 272, h: 424 };
   const SHORT = {
@@ -853,6 +855,8 @@
   // Edit layout: on/off, the selected objects (by data-key), and the drag or selection box in progress
   let editing = false, move = null, marquee = null, moveFrame = 0;
   const sel = new Set();
+  // The visible drawing area in diagram units (fitView widens it to fill the map)
+  let VB = { x: 0, y: 0, w: 1180, h: 890 };
 
   // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -921,7 +925,7 @@
     el('circle', { cx: 2, cy: 2, r: 1.2, class: 't-grid' }, pat);
     const mk = el('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: 7, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M0,0 L10,5 L0,10 z', class: 't-arrow' }, mk);
-    el('rect', { x: 0, y: 0, width: 1180, height: 890, fill: 'url(#dots)' }, svg);
+    el('rect', { x: VB.x, y: VB.y, width: VB.w, height: VB.h, fill: 'url(#dots)', id: 'bgDots' }, svg);
 
     // Zones along the bottom
     for (const k of ['zHQ', 'zA', 'zB', 'zC', 'zRoad', 'zApps']) zone(k);
@@ -942,7 +946,8 @@
       points: [N.inet, ...ispWaypoints(), N.isp].map((p) => `${p.x},${p.y}`).join(' '),
       class: 't-link dashed', opacity: '0.7'
     }, svg);
-    el('text', { x: 15, y: 170, 'text-anchor': 'middle', class: 't-link-label', transform: 'rotate(-90 15 170)' }, svg).textContent = 'HQ ISP link (outside Cato)';
+    const lx = ispX() + 10, ly = N.inet.y + 100;
+    el('text', { x: lx, y: ly, 'text-anchor': 'middle', class: 't-link-label', transform: `rotate(-90 ${lx} ${ly})` }, svg).textContent = 'HQ ISP link (outside Cato)';
 
     for (const [a, b, label, kind, at = 0.5] of LINKS) {
       const A = N[a], B = N[b];
@@ -1909,7 +1914,7 @@
   function showFlowOnPhone() {
     if (!mobileMQ.matches || canvas.classList.contains('fit')) return;
     const cx = (N[state.src].x + N[state.dst].x) / 2;
-    const left = (cx / 1180) * svg.clientWidth - canvas.clientWidth / 2;
+    const left = ((cx - VB.x) / VB.w) * svg.clientWidth - canvas.clientWidth / 2;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     canvas.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' });
   }
@@ -1975,7 +1980,30 @@
     svg.replaceChildren();
     drawStatic();
     update();
+    fitView();
   }
+  // On a wide screen the map is capped in height, which used to leave empty bands on the left and right. Widen the
+  // drawing area to the map's full width (the default layout stays centred at the same size), and grow it further if
+  // moved objects sit outside it, so everything stays reachable.
+  function fitView() {
+    const w = svg.clientWidth;
+    if (!w) return;
+    const cap = parseFloat(getComputedStyle(svg).maxHeight);
+    const h = Math.min(w * 890 / 1180, Number.isFinite(cap) ? cap : Infinity);
+    const half = w / (h / 890) / 2;
+    let x0 = Math.min(0, 590 - half), x1 = Math.max(1180, 590 + half), y0 = 0, y1 = 890;
+    const u = unionBox(Object.keys(HOME));
+    if (Number.isFinite(u.x0)) {
+      x0 = Math.min(x0, u.x0); x1 = Math.max(x1, u.x1);
+      y0 = Math.min(y0, u.y0); y1 = Math.max(y1, u.y1);
+    }
+    VB = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    svg.setAttribute('viewBox', `${VB.x} ${VB.y} ${VB.w} ${VB.h}`);
+    svg.style.height = h + 'px';
+    const bg = $('bgDots');
+    if (bg) { bg.setAttribute('x', VB.x); bg.setAttribute('y', VB.y); bg.setAttribute('width', VB.w); bg.setAttribute('height', VB.h); }
+  }
+  window.addEventListener('resize', fitView);
   const keyEl = (k) => svg.querySelector(`[data-key="${k}"]`);
   function bboxOf(k) {
     const e = keyEl(k);
@@ -1995,8 +2023,8 @@
   }
   // Moves the selected objects by (dx, dy) from their start positions, keeping all of them inside the map.
   function shiftSel(start, box, dx, dy) {
-    dx = Math.min(1180 - box.x1, Math.max(-box.x0, dx));
-    dy = Math.min(890 - box.y1, Math.max(-box.y0, dy));
+    dx = Math.min(VB.x + VB.w - box.x1, Math.max(VB.x - box.x0, dx));
+    dy = Math.min(VB.y + VB.h - box.y1, Math.max(VB.y - box.y0, dy));
     for (const k in start) moveTo(k, start[k].x + dx, start[k].y + dy);
     if (!moveFrame) moveFrame = requestAnimationFrame(() => { moveFrame = 0; redraw(); });
   }
@@ -2168,9 +2196,10 @@
     e.currentTarget.textContent = fit ? 'Zoom in' : 'Fit to screen';
     e.currentTarget.setAttribute('aria-pressed', String(fit));
     $('mapTip').textContent = fit ? 'Whole map. Zoom in to read the labels.' : 'Swipe sideways to see the whole map.';
+    fitView();
     if (!fit) showFlowOnPhone();
   });
-  mobileMQ.addEventListener('change', renderHint);
+  mobileMQ.addEventListener('change', () => { renderHint(); fitView(); });
 
   // ---------- Theme ----------
   // Starts from the system setting; the button switches light/dark and remembers the choice in this browser.
@@ -2195,6 +2224,7 @@
   saveLayout();
   drawStatic();
   update();
+  fitView();
   showFlowOnPhone();
 })();
 </script>
