@@ -877,11 +877,16 @@
   const OFFBAR = { x0: 300, x1: 770, y: 561, h: 36 };
   const OFFBAR_W = OFFBAR.x1 - OFFBAR.x0;
   // Where each Socket's Off-Cloud tunnel meets the bar, at height y (computed, so it follows objects moved in Edit layout)
+  // A link meets a bar straight above or below the Socket, or at the bar's nearest end when the Socket is past it.
+  const onBar = (x, x0, x1) => Math.min(x1 - 20, Math.max(x0 + 20, x));
   function offRoute(k, y) {
     if (k === 'sockDC' || k === 'isp') return [{ x: OFFBAR.x0 + (k === 'isp' ? 6 : 12), y }];
-    if (k === 'sockA') return [{ x: N.sockA.x, y }];
-    return [{ x: N.sockB.x - 65, y: N.sockB.y }, { x: N.sockB.x - 65, y }];
+    if (k === 'sockA') return [{ x: onBar(N.sockA.x, OFFBAR.x0, OFFBAR.x1), y }];
+    const bx = onBar(N.sockB.x - 65, OFFBAR.x0, OFFBAR.x1);
+    return [{ x: bx, y: N.sockB.y }, { x: bx, y }];
   }
+  // Where a Socket's MPLS link meets the MPLS bar
+  const mplsX = (k) => onBar(N[k].x, N.mpls.x - BOX.mpls[0] / 2, N.mpls.x + BOX.mpls[0] / 2);
   const offExit = (k) => (k === 'sockDC' ? ['isp', ...offRoute(k, OFFBAR.y - 8)] : offRoute(k, OFFBAR.y - 8));
   // Each Socket's dashed link to the Off-Cloud bar (HQ's starts at its ISP router)
   const OFF_LINKS = ['isp', 'sockA', 'sockB'];
@@ -935,7 +940,7 @@
 
     // MPLS (Alternative WAN) between HQ, Branch A and Branch B
     const m = N.mpls, [mw, mh] = BOX.mpls;
-    for (const k in N) if (N[k].mpls) el('line', { x1: N[k].x, y1: N[k].y, x2: N[k].x, y2: N.mpls.y, class: 't-link mpls' }, svg);
+    for (const k in N) if (N[k].mpls) el('line', { x1: N[k].x, y1: N[k].y, x2: mplsX(k), y2: N.mpls.y, class: 't-link mpls' }, svg);
     const mg = el('g', { class: 't-mpls', 'data-key': 'mpls' }, svg);
     el('rect', { x: m.x - mw / 2, y: m.y - mh / 2, width: mw, height: mh, rx: mh / 2 }, mg);
     el('text', { x: m.x, y: m.y + 13, 'text-anchor': 'middle' }, mg).textContent = 'MPLS · backup (Alternative WAN)';
@@ -1338,7 +1343,7 @@
       const ea = S.edge, eb = D.edge;
       r.verdict = ['mpls', 'Backup over MPLS, no PoP'];
       r.why = 'The Cato Cloud is the primary path between these sites and MPLS is the backup. When the Socket loses its path to the Cato Cloud, the network rule fails over to the secondary transport, Alternative WAN: Socket to Socket across MPLS in an encrypted UDP tunnel. While on backup the traffic never reaches a PoP or SPACE, so the WAN Firewall and threat engines do not inspect it.';
-      r.path = [s, ea, { x: N[ea].x, y: N.mpls.y - 8 }, { x: N[eb].x, y: N.mpls.y - 8 }, eb, d];
+      r.path = [s, ea, { x: mplsX(ea), y: N.mpls.y - 8 }, { x: mplsX(eb), y: N.mpls.y - 8 }, eb, d];
       r.steps.push(firstStep(s));
       r.steps.push({ at: ea, where: 'Socket', text: `The network rule has Cato Cloud as the primary transport and Alternative WAN as the secondary. The Cato Cloud path is down, so the ${N[ea].sub} Socket fails over and sends the packet out its MPLS interface.` });
       r.steps.push({ at: 'mpls', where: 'MPLS', text: "The packet crosses the MPLS provider's network inside an encrypted UDP tunnel between the two Sockets. The carrier routes between the Sockets' MPLS addresses in your VRF; where the Socket supports it, BGP with the MPLS router exchanges these routes dynamically." });
