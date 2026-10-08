@@ -632,7 +632,7 @@
         <button type="button" class="btn edit-btn" id="editBtn" aria-pressed="false">Edit layout</button>
       </div></div>
       <div class="canvas-scroll" id="canvas">
-        <svg class="topo" id="topo" viewBox="0 0 1180 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
+        <svg class="topo" id="topo" viewBox="0 0 1460 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
       </div>
       <div class="chooser" id="chooser" role="dialog" aria-labelledby="chooserTitle" hidden>
         <div class="chooser-h"><b id="chooserTitle"></b><button type="button" class="chooser-x" id="chooserX" aria-label="Close and keep Cato Cloud">&times;</button></div>
@@ -785,11 +785,11 @@
     inet:   { label: 'Anyone on the internet', sub: 'e.g. 3.3.3.3', type: 'inbound', x: 95, y: 70, pick: true },
     vsCloud:{ label: 'vSocket', sub: '172.31.0.0/16', type: 'socket', pop: 'lon', x: 620, y: 160 },
     space:  { label: 'Cato SPACE', sub: 'single pass cloud engine', type: 'space', x: 590, y: 362 },
-    tor:    { label: 'PoP', sub: 'Toronto', type: 'pop', x: 395, y: 345 },
+    tor:    { label: 'PoP', sub: 'Toronto', type: 'pop', x: 435, y: 375 },
     lon:    { label: 'PoP', sub: 'London', type: 'pop', x: 590, y: 252 },
-    fra:    { label: 'PoP', sub: 'Frankfurt', type: 'pop', x: 785, y: 345 },
-    tyo:    { label: 'PoP', sub: 'Tokyo', type: 'pop', x: 478, y: 462 },
-    chi:    { label: 'PoP', sub: 'Chicago', type: 'pop', x: 702, y: 462 },
+    fra:    { label: 'PoP', sub: 'Frankfurt', type: 'pop', x: 785, y: 250 },
+    tyo:    { label: 'PoP', sub: 'Tokyo', type: 'pop', x: 783, y: 447 },
+    chi:    { label: 'PoP', sub: 'Chicago', type: 'pop', x: 812, y: 332 },
     isp:    { label: 'ISP router', sub: 'public 2.2.2.2', type: 'isp', x: 215, y: 515 },
     servers:{ label: 'Server VLAN', sub: '192.168.20.0/24', type: 'lan', site: 'hq', edge: 'sockDC', x: 90, y: 652, pick: true },
     dmz:    { label: 'Web server', sub: '192.168.50.20 · DMZ', type: 'dmz', site: 'hq', edge: 'sockDC', x: 90, y: 748, pick: true },
@@ -797,12 +797,12 @@
     users:  { label: 'Users VLAN', sub: '10.10.10.0/24', type: 'lan', site: 'branchA', edge: 'sockA', x: 370, y: 652, pick: true },
     guest:  { label: 'Guest Wi-Fi', sub: '10.10.99.0/24 · guest', type: 'guest', site: 'branchA', edge: 'sockA', x: 370, y: 748, pick: true },
     sockA:  { label: 'Socket', sub: 'Branch A', type: 'socket', pop: 'tor', mpls: true, x: 500, y: 700 },
-    usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 715, y: 652, pick: true },
-    sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 625, y: 748 },
-    lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 915, y: 652, pick: true },
-    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 860, y: 748 },
+    usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 1050, y: 637, pick: true },
+    sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 960, y: 733 },
+    lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 1200, y: 277, pick: true },
+    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 1145, y: 373 },
     remote: { label: 'Remote user', sub: 'Cato Client · laptop', type: 'remote', site: 'remote', pop: 'tor', x: 110, y: 470, pick: true },
-    mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 425, y: 850 }
+    mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 615, y: 850 }
   };
   const BOX = { end: [150, 50], dev: [100, 44], isp: [118, 44], mpls: [460, 36] };
   // The HQ ISP link: from the internet over the top and down the far left edge to the ISP router, never through Cato.
@@ -810,7 +810,7 @@
   const ispX = () => Math.min(N.inet.x, N.isp.x) - 90;
   const ispWaypoints = () => [{ x: ispX(), y: N.inet.y }, { x: ispX(), y: N.isp.y }];
   // One features panel on the right of the Cato Cloud: CATO SPACE on top, AT THE EDGE below.
-  const PANEL = { x: 898, y: 112, w: 272, h: 424 };
+  const PANEL = { x: 1177, y: 470, w: 272, h: 424 };
   const SHORT = {
     transport: 'DTLS tunnel', clienttunnel: 'Client tunnel', vsocket: 'vSocket', ipsec: 'IPsec + BGP', altwan: 'MPLS backup (Alt WAN)', offcloud: 'Off-Cloud tunnel', bgpmpls: 'BGP to MPLS router',
     netrules: 'Network rules', tcpacc: 'TCP Acceleration', qos: 'QoS & loss mitigation', plm: 'Packet loss mitigation', msa: 'MSA block rule',
@@ -857,7 +857,9 @@
   let editing = false, move = null, marquee = null, moveFrame = 0;
   const sel = new Set();
   // The visible drawing area in diagram units (fitView widens it to fill the map)
-  let VB = { x: 0, y: 0, w: 1180, h: 890 };
+  // Design area of the default layout (Branch C and the features panel sit on the right, past the Cato Cloud).
+  const DW = 1460, DH = 890;
+  let VB = { x: 0, y: 0, w: DW, h: DH };
 
   // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -905,8 +907,8 @@
   const ZONES = {
     zHQ: { x: 10, y: 605, w: 270, h: 210, label: 'HQ / Data center · Toronto' },
     zA: { x: 290, y: 605, w: 265, h: 210, label: 'Branch A · Toronto' },
-    zB: { x: 565, y: 605, w: 230, h: 210, label: 'Branch B · Tokyo' },
-    zC: { x: 805, y: 605, w: 195, h: 210, label: 'Branch C · Chicago' },
+    zB: { x: 900, y: 590, w: 230, h: 210, label: 'Branch B · Tokyo' },
+    zC: { x: 1090, y: 230, w: 195, h: 210, label: 'Branch C · Chicago' },
     zRoad: { x: 110, y: 434, label: 'On the road' },
     zApps: { x: 22, y: 255, w: 276, h: 105, label: 'Private apps · Toronto DC' },
     zCloud: { x: 305, y: 205, w: 570, h: 310, cloud: true }
@@ -2002,9 +2004,9 @@
     const w = svg.clientWidth;
     if (!w) return;
     const cap = parseFloat(getComputedStyle(svg).maxHeight);
-    const h = Math.min(w * 890 / 1180, Number.isFinite(cap) ? cap : Infinity);
-    const half = w / (h / 890) / 2;
-    let x0 = Math.min(0, 590 - half), x1 = Math.max(1180, 590 + half), y0 = 0, y1 = 890;
+    const h = Math.min(w * DH / DW, Number.isFinite(cap) ? cap : Infinity);
+    const half = w / (h / DH) / 2;
+    let x0 = Math.min(0, DW / 2 - half), x1 = Math.max(DW, DW / 2 + half), y0 = 0, y1 = DH;
     const u = unionBox(Object.keys(HOME));
     if (Number.isFinite(u.x0)) {
       x0 = Math.min(x0, u.x0); x1 = Math.max(x1, u.x1);
