@@ -1140,13 +1140,16 @@
         r.steps.push({ at: S.pop, where: popName(S.pop), text: `${popName(S.pop)} terminates the Client tunnel and hands the request to SPACE.` });
         F('clienttunnel', 'Cato Client', 'Encrypted DTLS tunnel from the laptop to the nearest PoP. Falls back to a TCP 443 tunnel when UDP is blocked.');
       } else {
-        r.why = 'Clientless zero trust access: the contractor opens the Browser Access portal, signs in, and reaches only the published app. The PoP is a reverse proxy, so the browser never connects to the App Connector or the app. With RBI for private apps, the app runs in an isolated browser so nothing is stored on the unmanaged laptop.';
+        r.why = 'Clientless zero trust access: the contractor opens the Browser Access portal, signs in, and reaches only the published app. The PoP is a reverse proxy, so the browser never connects to the App Connector or the app. Optionally, RBI (separate licence) runs the portal in an isolated browser so nothing is stored on the unmanaged laptop.';
         r.steps.push({ at: s, where: 'Contractor', text: 'The contractor opens your Applications Portal URL in any browser. It is a Cato-hosted name built from your account subdomain (copy it from Access > Browser Access Control > Settings), and Cato\'s public DNS resolves it to the Cato Cloud. You create no DNS records, and the laptop never looks up erp.corp.local. Nothing is installed.' });
         r.steps.push({ at: S.pop, where: popName(S.pop), text: `${popName(S.pop)}, nearest to the contractor, ends the browser's HTTPS session. With no portal session yet, it sends the contractor to your identity provider (SSO and MFA), checks that their email domain is allowed, then sets a session cookie.` });
         r.steps.push({ at: S.pop, where: popName(S.pop), text: 'The portal shows a tile for each app the contractor is allowed to open. A click on a web app is proxied over HTTP/S; an RDP or SSH app opens as an HTML5 session in the browser tab.' });
         F('portal', 'PoP', 'Browser access to private apps over HTTP/S, RDP or SSH, with no client install. The PoP is a reverse proxy with two sessions: browser to PoP (portal certificate) and App Connector to app. Sign-in is SSO with your identity provider; allowed email domains and the session cookie lifetime are set in Browser Access Control > Settings.');
-        F('rbi', 'SPACE', 'RBI can also protect private apps: the app is rendered in an isolated browser in the Cato Cloud, so data stays off the unmanaged laptop.');
+        F('rbi', 'SPACE', 'Optional, with the RBI licence: the portal is rendered in an isolated browser in the Cato Cloud, so you can block downloads, copy/paste and printing on the unmanaged laptop. It is not set in the Private Access policy: create a custom category for the Applications Portal and an Internet Firewall rule with the RBI action. All apps in the portal then open in the same RBI session. Cato documents this for Browser Access portal apps; confirm it for App Connector apps.');
       }
+      // Cato documents inspection of all permitted Private Access sessions, and says its engines are the same for every
+      // access method, but no article confirms each engine for portal sessions.
+      const portalNote = S.type === 'contractor' ? ' For portal sessions this is implied, not documented per engine: Cato says its security engines are the same for every access method. Confirm with Cato.' : '';
       r.steps.push({ at: 'space', where: 'Cato SPACE', text: S.type === 'contractor'
         ? 'SPACE applies the Private Access policy: is this user or group allowed to this app from a browser connection, and from this country? Anything not allowed is blocked and never shows as a tile.'
         : 'SPACE applies the Private Access policy: is this user or group allowed to this app, and does the device pass the posture checks? Anything not allowed is blocked.' });
@@ -1155,10 +1158,10 @@
       r.steps.push({ at: d, where: 'Private app', text: 'The user reaches erp.corp.local. The app sees the App Connector\'s IP, not the user\'s, so allow the connector in the internal firewall; the user\'s identity is in Cato\'s events. Nothing else in the data center network is reachable.' });
       F('privaccess', 'SPACE', 'A Private App object links the published app domain to the internal address and an App Connector group. Policy rules allow users or groups, optionally with device posture; everything else is blocked.');
       F('appconn', 'App Connector', 'Lightweight connector in the app environment that connects outbound to Cato, so the data center needs no inbound rules and is not added to the WAN. Put two connectors in the group for high availability.');
-      F('ips', 'SPACE', 'Every permitted Private Access session still runs through the threat prevention engines in SPACE.');
+      F('ips', 'SPACE', 'Cato inspects every permitted Private Access session with its threat prevention engines in SPACE.' + portalNote);
       if (webish) {
-        F('am', 'SPACE', 'Files moving to and from the private app are scanned by anti-malware, like any other traffic through Cato.');
-        F('dlp', 'SPACE', 'CASB/DLP inspection also applies to private app sessions, for example sensitive data uploaded to or downloaded from the app.');
+        F('am', 'SPACE', 'Files moving to and from the private app are scanned by anti-malware, like any other traffic through Cato. Over HTTPS this needs TLSi.' + portalNote);
+        F('dlp', 'SPACE', 'CASB/DLP inspection also applies to private app sessions, for example sensitive data uploaded to or downloaded from the app. The rules go in App & Data Inline, not the Private Access policy, and HTTPS needs TLSi.' + portalNote);
       }
       return r;
     }
@@ -1447,6 +1450,7 @@
     } else if (v === 'rule' && D.type === 'papp') {
       add('wanfw', 'Not used: private apps behind App Connectors are controlled by the Private Access policy, not the WAN Firewall.');
       if (S.type === 'contractor') add('clienttunnel', 'Not needed: the Browser Access portal is clientless.');
+      else add('rbi', 'Not used: RBI for private apps works through the Browser Access portal. Cato Client users open the app directly.');
       if (!webish) ['am', 'dlp'].forEach((id) => add(id, media));
     } else if (v === 'rule') {
       add('inetfw', 'Not used: traffic between your sites and users is checked by the WAN Firewall. The Internet Firewall is for internet-bound traffic.');
