@@ -632,7 +632,7 @@
         <button type="button" class="btn edit-btn" id="editBtn" aria-pressed="false">Edit layout</button>
       </div></div>
       <div class="canvas-scroll" id="canvas">
-        <svg class="topo" id="topo" viewBox="0 0 1460 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Chicago and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Chicago, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
+        <svg class="topo" id="topo" viewBox="0 0 1460 890" role="img" aria-label="Sample Cato topology. Top: a cloud VPC or VNet (AWS, Azure or GCP) with a vSocket, the internet and SaaS. Middle: the Cato Cloud with PoPs in Toronto, London, Tokyo, Dubai and Frankfurt, all connected to the Cato SPACE core. Left: a private app behind an App Connector and a remote user. Bottom: HQ and Branch A in Toronto, Branch B in Tokyo, an IPsec branch in Dubai, and an MPLS network between HQ, Branch A and Branch B that backs up the Cato Cloud. Between the Cato Cloud and the sites: Off-Cloud tunnels, Socket to Socket over the internet."></svg>
       </div>
       <div class="chooser" id="chooser" role="dialog" aria-labelledby="chooserTitle" hidden>
         <div class="chooser-h"><b id="chooserTitle"></b><button type="button" class="chooser-x" id="chooserX" aria-label="Close and keep Cato Cloud">&times;</button></div>
@@ -789,7 +789,7 @@
     lon:    { label: 'PoP', sub: 'London', type: 'pop', x: 590, y: 252 },
     fra:    { label: 'PoP', sub: 'Frankfurt', type: 'pop', x: 785, y: 250 },
     tyo:    { label: 'PoP', sub: 'Tokyo', type: 'pop', x: 783, y: 447 },
-    chi:    { label: 'PoP', sub: 'Chicago', type: 'pop', x: 812, y: 332 },
+    dxb:    { label: 'PoP', sub: 'Dubai', type: 'pop', x: 812, y: 332 },
     isp:    { label: 'ISP router', sub: 'public 2.2.2.2', type: 'isp', x: 215, y: 515 },
     servers:{ label: 'Server VLAN', sub: '192.168.20.0/24', type: 'lan', site: 'hq', edge: 'sockDC', x: 90, y: 652, pick: true },
     dmz:    { label: 'Web server', sub: '192.168.50.20 · DMZ', type: 'dmz', site: 'hq', edge: 'sockDC', x: 90, y: 748, pick: true },
@@ -800,7 +800,7 @@
     usersB: { label: 'Users VLAN', sub: '10.20.10.0/24', type: 'lan', site: 'branchB', edge: 'sockB', x: 1050, y: 637, pick: true },
     sockB:  { label: 'Socket', sub: 'Branch B', type: 'socket', pop: 'tyo', mpls: true, x: 960, y: 733 },
     lanC:   { label: 'Branch C LAN', sub: '10.30.0.0/24', type: 'ipsecsite', site: 'branchC', edge: 'fwC', x: 1200, y: 277, pick: true },
-    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'chi', x: 1145, y: 373 },
+    fwC:    { label: 'Branch C FW', sub: 'IPsec IKEv2', type: 'ipsecdev', pop: 'dxb', x: 1145, y: 373 },
     remote: { label: 'Remote user', sub: 'Cato Client · laptop', type: 'remote', site: 'remote', pop: 'tor', x: 110, y: 470, pick: true },
     mpls:   { label: 'MPLS', sub: 'Alternative WAN', type: 'mpls', x: 615, y: 850 }
   };
@@ -824,12 +824,12 @@
   const LINKS = [
     ['cloud', 'vsCloud'], ['vsCloud', 'lon', 'DTLS', null, 0.45],
     ['tor', 'space', null, 'core'], ['lon', 'space', null, 'core'], ['fra', 'space', null, 'core'],
-    ['tyo', 'space', null, 'core'], ['chi', 'space', null, 'core'],
+    ['tyo', 'space', null, 'core'], ['dxb', 'space', null, 'core'],
     ['space', 'saas', 'egress', null, 0.62], ['saas', 'inet', null, 'dashed'],
     ['servers', 'sockDC'], ['dmz', 'sockDC'], ['sockDC', 'tor', 'DTLS', null, 0.5], ['sockDC', 'isp', null, 'dashed'],
     ['users', 'sockA'], ['guest', 'sockA'], ['sockA', 'tor', 'DTLS · UDP 443', null, 0.5],
     ['usersB', 'sockB'], ['sockB', 'tyo', 'DTLS', null, 0.75],
-    ['lanC', 'fwC'], ['fwC', 'chi', 'IPsec + BGP', null, 0.75],
+    ['lanC', 'fwC'], ['fwC', 'dxb', 'IPsec + BGP', null, 0.75],
     ['remote', 'tor', 'Client tunnel', 'dashed', 0.45],
     ['papp', 'appc'], ['appc', 'tor', 'outbound', 'dashed', 0.55],
     ['contractor', 'fra', 'HTTPS to portal', 'dashed', 0.55],
@@ -908,7 +908,7 @@
     zHQ: { x: 10, y: 605, w: 270, h: 210, label: 'HQ / Data center · Toronto' },
     zA: { x: 290, y: 605, w: 265, h: 210, label: 'Branch A · Toronto' },
     zB: { x: 900, y: 590, w: 230, h: 210, label: 'Branch B · Tokyo' },
-    zC: { x: 1090, y: 230, w: 195, h: 210, label: 'Branch C · Chicago' },
+    zC: { x: 1090, y: 230, w: 195, h: 210, label: 'Branch C · Dubai' },
     zRoad: { x: 110, y: 434, label: 'On the road' },
     zApps: { x: 22, y: 255, w: 276, h: 105, label: 'Private apps · Toronto DC' },
     zCloud: { x: 305, y: 205, w: 570, h: 310, cloud: true }
